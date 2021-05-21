@@ -54,16 +54,14 @@ clean_meta$first_public <- as_date(clean_meta$first_public)
 clean_meta$host_tax_id <- as.numeric(clean_meta$host_tax_id)
 clean_meta$base_count <- as.numeric(clean_meta$base_count)
 
-
-dbhost <- gsub("[\r\n]", "", Sys.getenv(c("DB_HOST")))
-
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
-                      dbname = gsub("[\r\n]", "", Sys.getenv(c("DB"))),
-                      host = strsplit(dbhost, ':')[[1]][[1]],
-                      port = strsplit(dbhost, ':')[[1]][[2]],
-                      user = gsub("[\r\n]", "", Sys.getenv(c("SECRET_USERNAME"))),
-                      password = gsub("[\r\n]", "", Sys.getenv(c("SECRET_PASSWORD")))
+                      dbname = Sys.getenv(c("DB")),
+                      host = Sys.getenv(c("DB_HOST")),
+                      port = Sys.getenv(c("DB_PORT")),
+                      user = Sys.getenv(c("SECRET_USERNAME")),
+                      password = Sys.getenv(c("SECRET_PASSWORD"))
 )
+
 dbSendQuery(con, "TRUNCATE TABLE meta")
 dbWriteTable(con, "meta", clean_meta , append = TRUE, row.names = FALSE)
 #copy_to(con, clean_meta, name="meta", overwrite= TRUE, temporary = FALSE)

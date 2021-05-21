@@ -5,14 +5,12 @@ library(DBI)
 
 print(paste("Update started:",  Sys.time(), sep=" ")) 
 
-dbhost <- gsub("[\r\n]", "", Sys.getenv(c("DB_HOST")))
-
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
-                      dbname = gsub("[\r\n]", "", Sys.getenv(c("DB"))),
-                      host = strsplit(dbhost, ':')[[1]][[1]],
-                      port = strsplit(dbhost, ':')[[1]][[2]],
-                      user = gsub("[\r\n]", "", Sys.getenv(c("SECRET_USERNAME"))),
-                      password = gsub("[\r\n]", "", Sys.getenv(c("SECRET_PASSWORD")))
+                      dbname = Sys.getenv(c("DB")),
+                      host = Sys.getenv(c("DB_HOST")),
+                      port = Sys.getenv(c("DB_PORT")),
+                      user = Sys.getenv(c("SECRET_USERNAME")),
+                      password = Sys.getenv(c("SECRET_PASSWORD"))
 )
 
 
