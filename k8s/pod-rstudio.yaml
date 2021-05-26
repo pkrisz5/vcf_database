@@ -1,0 +1,54 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-rstudio
+  namespace: kooplex-veo
+spec:
+  hostname: postgres-rstudio
+  containers:
+  - image: kooplex/k8plex-ei-rstudio-basic
+    command:
+      - sleep
+      - "36000"
+    name: postgres-rstudio
+    env:
+      - name: SCHEMA_PATH
+        value: /x_scripts/repo/schema/
+      - name: DB_PORT
+        value: "5432"
+      - name: SECRET_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: pg-admin-ebi
+            key: admin
+      - name: SECRET_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: pg-admin-ebi
+            key: adminpw
+      - name: DB_HOST
+        valueFrom:
+          secretKeyRef:
+            name: pg-admin-ebi
+            key: dbhost
+      - name: DB
+        valueFrom:
+          secretKeyRef:
+            name: pg-admin-ebi
+            key: db
+    volumeMounts:
+      - mountPath: /x_scripts
+        name: pv-x
+        subPath: scripts
+      - mountPath: /x_cov
+        name: pv-x
+        subPath: cov
+      - mountPath: /x_vcf
+        name: pv-x
+        subPath: vcf
+  volumes:
+    - name: pv-x
+      persistentVolumeClaim:
+        claimName: pvc-kooplex
+
