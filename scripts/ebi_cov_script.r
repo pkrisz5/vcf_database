@@ -67,6 +67,7 @@ if (nrow(ids)!=0){
         select(ena_run,pos, coverage )
       
         print(paste(Sys.time(), "columns in cov", ncol(cov), sep=" "))
+	dbWriteTable(con, "cov", cov , append = TRUE, row.names = FALSE)
     }
   }
 }
