@@ -4,12 +4,13 @@ library(lubridate)
 library(RCurl)
 library(stringr)
 
+print(paste(Sys.time(), "started...", sep=" ")) 
 
 url <- getURL(url = "https://www.ebi.ac.uk/ena/portal/api/search?result=read_run&query=tax_tree(2697049)&fields=accession%2Csample_accession%2Cexperiment_accession%2Cstudy_accession%2Cdescription%2Ccountry%2Ccollection_date%2Cfirst_created%2Cfirst_public%2Chost%2Chost_sex%2Chost_tax_id%2Chost_body_site%2Cbio_material%2Cculture_collection%2Cinstrument_model%2Cinstrument_platform%2Clibrary_layout%2Clibrary_name%2Clibrary_selection%2Clibrary_source%2Clibrary_strategy%2Csequencing_method%2Cisolate%2Cstrain%2Cbase_count%2Ccollected_by%2Cbroker_name%2Ccenter_name%2Csample_capture_status%2Cfastq_ftp%2Cchecklist&format=tsv&limit=0", 
               httpheader =c( 'Content-Type' = "application/x-www-form-urlencoded")                )
 d1 <- read_tsv(file = url , col_types = cols(.default = "c"))
 
-print(paste("Number of rows downloaded:", nrow(d1),  "(time stamp:", Sys.time(), ")", sep=" ")) 
+print(paste(Sys.time(), "number of rows downloaded:", nrow(d1), sep=" ")) 
 
 if (nrow(d1) < 1) {
  q(status = 2)
@@ -56,7 +57,7 @@ clean_meta$first_public <- as_date(clean_meta$first_public)
 clean_meta$host_tax_id <- as.numeric(clean_meta$host_tax_id)
 clean_meta$base_count <- as.numeric(clean_meta$base_count)
 
-print(paste("Prepared:",  "(time stamp:", Sys.time(), ")", sep=" ")) 
+print(paste(Sys.time(), "parsed", sep=" ")) 
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       dbname = Sys.getenv(c("DB")),
@@ -66,17 +67,16 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       password = Sys.getenv(c("SECRET_PASSWORD"))
 )
 dbSendQuery(con, "TRUNCATE TABLE meta")
-print(paste("Truncated table:",  "(time stamp:", Sys.time(), ")", sep=" ")) 
-dbCommit(con)
+print(paste(Sys.time(), "truncated table meta", sep=" ")) 
+
 dbWriteTable(con, "meta", clean_meta , append = TRUE, row.names = FALSE)
-print(paste("Wrote table:",  "(time stamp:", Sys.time(), ")", sep=" ")) 
 
 n <- tbl(con, "meta") %>% 
   count()%>%
   collect
 
-print(paste("Number of rows in the meta table after update:", n$n,  "(time stamp:", Sys.time(), ")", sep=" ")) 
+print(paste(Sys.time(), "wrote", n$n, "records in table meta", sep=" ")) 
 
 if (n$n == 0) {
- q(status = 1)
+  q(status = 1)
 }
