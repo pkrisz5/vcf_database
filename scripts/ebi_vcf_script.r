@@ -3,7 +3,7 @@
 library(tidyverse)
 library(DBI)
 
-print(paste("Update started:",  Sys.time(), sep=" ")) 
+print(paste(Sys.time(), "started...", sep=" ")) 
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       dbname = Sys.getenv(c("DB")),
@@ -22,7 +22,7 @@ n <- tbl(con, "vcf") %>%
 
 if (nrow(n)==0) n <- tibble(ena_run=character())
 
-print(paste("Number of samples that are aready in the database:", nrow(n), "(time stamp:", Sys.time(), ")", sep=" ")) 
+print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep=" ")) 
 
 # Selects the new vcf files and uploads them in bins
 
@@ -32,7 +32,7 @@ ids <- ids %>%
   dplyr::filter(!ena_run %in% n$ena_run)
 
 if (nrow(ids)!=0){
-  print(paste("Number of new files in the folder:", nrow(ids), "(time stamp:", Sys.time(), ")", sep=" ")) 
+  print(paste(Sys.time(), "number of new files in the folder:", nrow(ids), sep=" ")) 
   ids <- ids %>%
     mutate(rows=seq.int(nrow(ids))) %>%
     mutate(bin = cut(rows, seq(1, nrow(ids) + 500, 500), right = FALSE)) # this creates bins because if too many files are treated in a single step, then it can cause problem, so in a single step data about max 1000 samples are uploaded
@@ -40,7 +40,7 @@ if (nrow(ids)!=0){
   ann_name <- c("allele", "annotation", "annotation_impact", "gene_name" ,"gene_id", "feature_type", "feature_id", "transcript_biotype", "rank_", "hgvs_c", "hgvs_p" ,"cdna_pos__cdna_length",  "cds_pos__cds_length" ,"aa_pos__aa_length" , "distance" , "errors_warnings_info") 
   
   for (j in levels(ids$bin)) {
-    print(paste("Bin under processing:", j, "(time stamp:", Sys.time(), ")", sep=" ")) 
+    print(paste(Sys.time(), "processing bin", j, sep=" ")) 
     vcf <- tibble(`#CHROM` = character(),
                   POS = double(),
                   ID = character(),
@@ -55,7 +55,7 @@ if (nrow(ids)!=0){
       filter(bin==j)
     f_list <- as.character(f_list$ena_run)
     for (f in f_list){
-      print(paste("start process:", f, sep= " "))
+      # print(paste(Sys.time(), "processing file", f, sep=" "))
       if (file.size(paste(filepath, f, ".annot.vcf", sep=""))!=0) {
         vcf_file <- paste(filepath, f, ".annot.vcf", sep="")
         x <- read_tsv(file = vcf_file, skip = 20, col_names=TRUE, cols(`#CHROM` = col_character(),
@@ -69,7 +69,7 @@ if (nrow(ids)!=0){
           mutate(ID=f)
         vcf <- rbind(vcf,x)
       } else {
-        print(paste("Excluded empty file:", f, sep=" "))
+        print(paste(Sys.time(), "excluded empty file", f, sep=" "))
       }
     }
     if (nrow(vcf)!=0){
@@ -139,4 +139,5 @@ n <- tbl(con, "vcf") %>%
 
 if (nrow(n)==0) n <- tibble(ena_run=character())
 
-print(paste("Number of samples that are in the database after the process:", nrow(n),  "(time stamp:", Sys.time(), ")", sep=" ")) 
+print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep=" ")) 
+
