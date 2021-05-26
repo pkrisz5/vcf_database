@@ -79,5 +79,5 @@ n <- tbl(con, "cov") %>%
 
 if (nrow(n)==0) n <- tibble(ena_run=character())
 
-print(paste(Sys.time(), "number of reords in table cov", sep=" ")) 
+print(paste(Sys.time(), "number of reords in table cov", nrow(n), sep=" ")) 
 
