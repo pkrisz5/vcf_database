@@ -9,6 +9,8 @@ url <- getURL(url = "https://www.ebi.ac.uk/ena/portal/api/search?result=read_run
               httpheader =c( 'Content-Type' = "application/x-www-form-urlencoded")                )
 d1 <- read_tsv(file = url , col_types = cols(.default = "c"))
 
+print(paste("Number of rows downloaded:", nrow(d1),  "(time stamp:", Sys.time(), ")", sep=" ")) 
+
 if (nrow(d1) < 1) {
  q(status = 2)
 }
@@ -54,6 +56,8 @@ clean_meta$first_public <- as_date(clean_meta$first_public)
 clean_meta$host_tax_id <- as.numeric(clean_meta$host_tax_id)
 clean_meta$base_count <- as.numeric(clean_meta$base_count)
 
+print(paste("Prepared:",  "(time stamp:", Sys.time(), ")", sep=" ")) 
+
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       dbname = Sys.getenv(c("DB")),
                       host = Sys.getenv(c("DB_HOST")),
@@ -61,10 +65,11 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       user = Sys.getenv(c("SECRET_USERNAME")),
                       password = Sys.getenv(c("SECRET_PASSWORD"))
 )
-
 dbSendQuery(con, "TRUNCATE TABLE meta")
+print(paste("Truncated table:",  "(time stamp:", Sys.time(), ")", sep=" ")) 
+dbCommit(con)
 dbWriteTable(con, "meta", clean_meta , append = TRUE, row.names = FALSE)
-#copy_to(con, clean_meta, name="meta", overwrite= TRUE, temporary = FALSE)
+print(paste("Wrote table:",  "(time stamp:", Sys.time(), ")", sep=" ")) 
 
 n <- tbl(con, "meta") %>% 
   count()%>%
