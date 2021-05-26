@@ -66,7 +66,7 @@ if (nrow(ids)!=0){
         dplyr::rename(pos=poz)%>%
         select(ena_run,pos, coverage )
       
-        print(paste(Sys.time(), "columns in cov", ncol(cov), sep=" "))
+        print(paste(Sys.time(), "appending", nrow(cov) " records in cov", sep=" "))
 	dbWriteTable(con, "cov", cov , append = TRUE, row.names = FALSE)
     }
   }
@@ -80,5 +80,5 @@ n <- tbl(con, "cov") %>%
 
 if (nrow(n)==0) n <- tibble(ena_run=character())
 
-print(paste(Sys.time(), "number of reords in table cov", nrow(n), sep=" ")) 
+print(paste(Sys.time(), "number of records in table cov", nrow(n), sep=" ")) 
 
