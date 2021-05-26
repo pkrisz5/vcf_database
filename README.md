@@ -28,14 +28,14 @@ Start helper pods, clone codebase and initialize database schema:
 ```bash
 kubectl apply -f pod-python.yaml
 kubectl apply -f pod-rstudio.yaml
-kubectl_ebi exec -it postgres-python -- git clone https://github.com/pkrisz5/vcf_database.git /x_scripts/repo
-kubectl_ebi exec -it postgres-python -- python /x_scripts/repo/scripts/init_db.py
+kubectl exec -it postgres-python -- git clone https://github.com/pkrisz5/vcf_database.git /x_scripts/repo
+kubectl exec -it postgres-python -- python /x_scripts/repo/scripts/init_db.py
 ```
 
 ### Insert data in database by hand
 
 ```bash
-kubectl_ebi exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_meta_script.r
-kubectl_ebi exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_cov_script.r
-kubectl_ebi exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_vcf_script.r
+kubectl exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_meta_script.r
+kubectl exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_cov_script.r
+kubectl exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_vcf_script.r
 ```
