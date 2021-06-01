@@ -3,118 +3,126 @@
 library(tidyverse)
 library(DBI)
 
-print(paste(Sys.time(), "started...", sep=" ")) 
+print(paste(Sys.time(), "started...", sep = " "))
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
-                      dbname = Sys.getenv(c("DB")),
-                      host = Sys.getenv(c("DB_HOST")),
-                      port = Sys.getenv(c("DB_PORT")),
-                      user = Sys.getenv(c("SECRET_USERNAME")),
-                      password = Sys.getenv(c("SECRET_PASSWORD"))
+  dbname = Sys.getenv(c("DB")),
+  host = Sys.getenv(c("DB_HOST")),
+  port = Sys.getenv(c("DB_PORT")),
+  user = Sys.getenv(c("SECRET_USERNAME")),
+  password = Sys.getenv(c("SECRET_PASSWORD"))
 )
 
 # Downloads the ID of the already uploaded vcf files
 
-n <- tbl(con, "vcf") %>% 
+n <- tbl(con, "vcf") %>%
   select(ena_run) %>%
-  distinct()%>%
+  distinct() %>%
   collect()
 
-if (nrow(n)==0) n <- tibble(ena_run=character())
+if (nrow(n) == 0) n <- tibble(ena_run = character())
 
-print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep=" ")) 
+print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep = " "))
 
 # Selects the new vcf files and uploads them in bins
 
 filepath <- c("/x_vcf/")
-ids <- tibble(ena_run=str_remove_all(list.files(path = filepath, pattern = regex("[0-9].annot.vcf")), pattern = ".annot.vcf"))
+ids <- tibble(ena_run = str_remove_all(list.files(path = filepath, pattern = regex("[0-9].annot.vcf")), pattern = ".annot.vcf"))
 ids <- ids %>%
   dplyr::filter(!ena_run %in% n$ena_run)
 
-if (nrow(ids)!=0){
-  print(paste(Sys.time(), "number of new files in the folder:", nrow(ids), sep=" ")) 
+if (nrow(ids) != 0) {
+  print(paste(Sys.time(), "number of new files in the folder:", nrow(ids), sep = " "))
   ids <- ids %>%
-    mutate(rows=seq.int(nrow(ids))) %>%
+    mutate(rows = seq.int(nrow(ids))) %>%
     mutate(bin = cut(rows, seq(1, nrow(ids) + 500, 500), right = FALSE)) # this creates bins because if too many files are treated in a single step, then it can cause problem, so in a single step data about max 1000 samples are uploaded
   print(ids)
-  ann_name <- c("allele", "annotation", "annotation_impact", "gene_name" ,"gene_id", "feature_type", "feature_id", "transcript_biotype", "rank_", "hgvs_c", "hgvs_p" ,"cdna_pos__cdna_length",  "cds_pos__cds_length" ,"aa_pos__aa_length" , "distance" , "errors_warnings_info") 
-  
+  ann_name <- c("allele", "annotation", "annotation_impact", "gene_name", "gene_id", "feature_type", "feature_id", "transcript_biotype", "rank_", "hgvs_c", "hgvs_p", "cdna_pos__cdna_length", "cds_pos__cds_length", "aa_pos__aa_length", "distance", "errors_warnings_info")
+
   for (j in levels(ids$bin)) {
-    print(paste(Sys.time(), "processing bin", j, sep=" ")) 
-    vcf <- tibble(`#CHROM` = character(),
-                  POS = double(),
-                  ID = character(),
-                  REF = character(),
-                  ALT = character(),
-                  QUAL = double(),
-                  FILTER = character(),
-                  INFO = character())
-    
-    
+    print(paste(Sys.time(), "processing bin", j, sep = " "))
+    vcf <- tibble(
+      `#CHROM` = character(),
+      POS = double(),
+      ID = character(),
+      REF = character(),
+      ALT = character(),
+      QUAL = double(),
+      FILTER = character(),
+      INFO = character()
+    )
+
+
     f_list <- ids %>%
-      filter(bin==j)
+      filter(bin == j)
     f_list <- as.character(f_list$ena_run)
-    for (f in f_list){
+    for (f in f_list) {
       # print(paste(Sys.time(), "processing file", f, sep=" "))
-      if (file.size(paste(filepath, f, ".annot.vcf", sep=""))!=0) {
-        vcf_file <- paste(filepath, f, ".annot.vcf", sep="")
-        x <- read_tsv(file = vcf_file, skip = 20, col_names=TRUE, cols(`#CHROM` = col_character(),
-                                                                       POS = col_double(),
-                                                                       ID = col_character(),
-                                                                       REF = col_character(),
-                                                                       ALT = col_character(),
-                                                                       QUAL = col_double(),
-                                                                       FILTER = col_character(),
-                                                                       INFO = col_character())) %>%
-          mutate(ID=f)
-        vcf <- rbind(vcf,x)
+      if (file.size(paste(filepath, f, ".annot.vcf", sep = "")) != 0) {
+        vcf_file <- paste(filepath, f, ".annot.vcf", sep = "")
+        x <- read_tsv(file = vcf_file, skip = 20, col_names = TRUE, cols(
+          `#CHROM` = col_character(),
+          POS = col_double(),
+          ID = col_character(),
+          REF = col_character(),
+          ALT = col_character(),
+          QUAL = col_double(),
+          FILTER = col_character(),
+          INFO = col_character()
+        )) %>%
+          mutate(ID = f)
+        vcf <- rbind(vcf, x)
       } else {
-        print(paste(Sys.time(), "excluded empty file", f, sep=" "))
+        print(paste(Sys.time(), "excluded empty file", f, sep = " "))
       }
     }
-    if (nrow(vcf)!=0){
+    if (nrow(vcf) != 0) {
       vcf <- vcf %>%
-        dplyr::rename(chrom = `#CHROM`,
-                      pos = POS,
-                      ena_run = ID,
-                      ref = REF,
-                      alt = ALT,
-                      qual = QUAL,
-                      filter = FILTER,
-                      info = INFO)%>%
-        separate(col="info", into=c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill="right")
+        dplyr::rename(
+          chrom = `#CHROM`,
+          pos = POS,
+          ena_run = ID,
+          ref = REF,
+          alt = ALT,
+          qual = QUAL,
+          filter = FILTER,
+          info = INFO
+        ) %>%
+        separate(col = "info", into = c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill = "right")
       vcf <- vcf %>%
-        mutate(ann = ifelse(vcf$ann=="INDEL", indel, ann)) %>%
-        mutate(indel = ifelse(!is.na(vcf$indel), TRUE, FALSE)) 
-      k <- max(str_count(vcf$ann, pattern = "\\,")  ) # maximum annotate version
-      a <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\,", n=k)  ) 
+        mutate(ann = ifelse(vcf$ann == "INDEL", indel, ann)) %>%
+        mutate(indel = ifelse(!is.na(vcf$indel), TRUE, FALSE))
+      k <- max(str_count(vcf$ann, pattern = "\\,")) # maximum annotate version
+      a <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\,", n = k))
       vcf <- cbind(vcf, a) %>%
-        select(-ann)%>%
-        pivot_longer(cols = names(a), values_to = "ann", names_to="ann_num", values_drop_na = TRUE) %>%
-        filter(ann!="") %>%
-        mutate(ann_num= str_sub(ann_num,start=2))
+        select(-ann) %>%
+        pivot_longer(cols = names(a), values_to = "ann", names_to = "ann_num", values_drop_na = TRUE) %>%
+        filter(ann != "") %>%
+        mutate(ann_num = str_sub(ann_num, start = 2))
       vcf$ann_num <- as.integer(vcf$ann_num)
-      
-      x <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\|", n=16) , column_name = ann_name)
+
+      x <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\|", n = 16), column_name = ann_name)
       names(x) <- ann_name
-      
-      
+
+
       vcf <- vcf %>%
-        mutate (dp4 = str_remove(dp4, pattern = "DP4=")) %>%
+        mutate(dp4 = str_remove(dp4, pattern = "DP4=")) %>%
         separate(col = dp4, into = c("count_ref_forward_base", "count_ref_reverse_base", "count_alt_forward_base", "count_alt_reverse_base")) %>%
         bind_cols(x) %>%
-        select (-ann) %>%
-        select (-allele) %>%
-        mutate (lof = ifelse(str_detect(hrun, pattern = "LOF="), hrun, lof))%>% # This fix a problem that sometimees lof and hrun columns are mixed
-        mutate (hrun = ifelse(str_detect(hrun, pattern = "LOF="), NA, hrun))%>%
-        mutate (dp = str_remove(dp, pattern = "DP=")) %>%
-        mutate (af = str_remove(af, pattern = "AF=")) %>%
-        mutate (sb = str_remove(sb, pattern = "SB=")) %>%
-        mutate (hrun = str_remove(hrun, pattern = "HRUN=")) %>%
-        mutate (lof = str_remove(lof, pattern = "LOF=")) %>%
-        mutate (nmd = str_remove(nmd, pattern = "NMD=")) %>%
-        select (ena_run, everything())
-      vcf[vcf==""] <- NA
+        select(-ann) %>%
+        select(-allele) %>%
+        mutate(lof = ifelse(str_detect(hrun, pattern = "LOF="), hrun, lof)) %>% # This fix a problem that sometimees lof and hrun columns are mixed
+        mutate(hrun = ifelse(str_detect(hrun, pattern = "LOF="), NA, hrun)) %>%
+        mutate(dp = str_remove(dp, pattern = "DP=")) %>%
+        mutate(af = str_remove(af, pattern = "AF=")) %>%
+        mutate(sb = str_remove(sb, pattern = "SB=")) %>%
+        mutate(hrun = str_remove(hrun, pattern = "HRUN=")) %>%
+        mutate(lof = str_remove(lof, pattern = "LOF=")) %>%
+        mutate(nmd = str_remove(nmd, pattern = "NMD=")) %>%
+        select(ena_run, everything()) %>%
+        dplyr::filter(annotation != "downstream_gene_variant") %>%
+        dplyr::filter(annotation != "upstream_gene_variant")
+      vcf[vcf == ""] <- NA
       vcf$pos <- as.integer(vcf$pos)
       vcf$qual <- as.integer(vcf$qual)
       vcf$dp <- as.integer(vcf$dp)
@@ -126,18 +134,17 @@ if (nrow(ids)!=0){
       vcf$count_ref_reverse_base <- as.integer(vcf$count_ref_reverse_base)
       vcf$hrun <- as.integer(vcf$hrun)
       vcf$distance <- as.integer(vcf$distance)
-      dbWriteTable(con, "vcf", vcf , append = TRUE, row.names = FALSE)
+      dbWriteTable(con, "vcf", vcf, append = TRUE, row.names = FALSE)
     }
   }
 }
 
 
-n <- tbl(con, "vcf") %>% 
+n <- tbl(con, "vcf") %>%
   select(ena_run) %>%
-  distinct()%>%
+  distinct() %>%
   collect()
 
-if (nrow(n)==0) n <- tibble(ena_run=character())
+if (nrow(n) == 0) n <- tibble(ena_run = character())
 
-print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep=" ")) 
-
+print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep = " "))
