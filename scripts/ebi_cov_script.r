@@ -28,7 +28,7 @@ print(paste(Sys.time(), "number of sample records aready in tabe cov before upda
 
 # Selects the new coverage files and uploads them in bins
 
-filepath <- c("/x_cov/")
+filepath <- c(Sys.getenv(c("DIR_TMP")))
 
 ids <- tibble(ena_run = str_remove(list.files(path = filepath, pattern = regex("\\.coverage$")), pattern = ".coverage"))
 ids <- ids %>%

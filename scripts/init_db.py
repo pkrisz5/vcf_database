@@ -69,17 +69,17 @@ if __name__ == '__main__':
         statement = open(os.path.join(p, "table-{}.sql".format(t))).read()
         db_exec( statement, transaction = True )
     
-    # create indexes
-    for statement in [
-        "CREATE INDEX IF NOT EXISTS idx_vcf_af on vcf(af);",
-        "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p on vcf(hgvs_p)",
-        "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage on cov(pos, coverage);",
-    ]:
-        db_exec( statement, transaction = True )
-    
-    # create materialized views
-    for v in mviews:
-        statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
-        db_exec( statement, transaction = True )
+#    # create indexes
+#    for statement in [
+#        "CREATE INDEX IF NOT EXISTS idx_vcf_af on vcf(af);",
+#        "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p on vcf(hgvs_p)",
+#        "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage on cov(pos, coverage);",
+#    ]:
+#        db_exec( statement, transaction = True )
+#    
+#    # create materialized views
+#    for v in mviews:
+#        statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
+#        db_exec( statement, transaction = True )
 
     myConnection.close()

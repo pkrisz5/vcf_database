@@ -1,0 +1,61 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: populate-data
+  namespace: kooplex-veo
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - /mnt/repo/scripts/wrap.sh
+            env:
+            - name: SECRET_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: admin
+                  name: pg-admin-ebi
+            - name: SECRET_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: adminpw
+                  name: pg-admin-ebi
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: dbhost
+                  name: pg-admin-ebi
+            - name: DB
+              valueFrom:
+                secretKeyRef:
+                  key: db
+                  name: pg-admin-ebi
+            image: veo.vo.elte.hu:5000/k8plex-ei-rstudio-basic
+            imagePullPolicy: IfNotPresent
+            name: populate-data
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /mnt
+              name: pvc
+          dnsPolicy: ClusterFirst
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - name: pvc
+            persistentVolumeClaim:
+              claimName: pvc-raw
+  schedule: 0 9 * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false

@@ -5,6 +5,9 @@ library(DBI)
 
 print(paste(Sys.time(), "started...", sep = " "))
 
+#FIXME:
+manual_excl_id <- c("ERR5471857", "ERR5473614", "ERR5473980", "ERR5474250",    "ERR5479235") # This vcf file is wrong, so needed to exclude manualy
+
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
   dbname = Sys.getenv(c("DB")),
   host = Sys.getenv(c("DB_HOST")),
@@ -26,84 +29,108 @@ print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep = " "))
 
 # Selects the new vcf files and uploads them in bins
 
-filepath <- c("/x_vcf/")
+filepath <- c(Sys.getenv(c("DIR_TMP")))
 ids <- tibble(ena_run = str_remove_all(list.files(path = filepath, pattern = regex("[0-9].annot.vcf")), pattern = ".annot.vcf"))
 ids <- ids %>%
-  dplyr::filter(!ena_run %in% n$ena_run)
+  dplyr::filter(!ena_run %in% n$ena_run) %>% # this removes ena_run ids those are already in the database
+  dplyr::filter(!ena_run %in% manual_excl_id) # this removes manually excluded ena_run ids
 
 if (nrow(ids) != 0) {
   print(paste(Sys.time(), "number of new files in the folder:", nrow(ids), sep = " "))
   ids <- ids %>%
     mutate(rows = seq.int(nrow(ids))) %>%
     mutate(bin = cut(rows, seq(1, nrow(ids) + 500, 500), right = FALSE)) # this creates bins because if too many files are treated in a single step, then it can cause problem, so in a single step data about max 1000 samples are uploaded
-  print(ids)
   ann_name <- c("allele", "annotation", "annotation_impact", "gene_name", "gene_id", "feature_type", "feature_id", "transcript_biotype", "rank_", "hgvs_c", "hgvs_p", "cdna_pos__cdna_length", "cds_pos__cds_length", "aa_pos__aa_length", "distance", "errors_warnings_info")
 
   for (j in levels(ids$bin)) {
     print(paste(Sys.time(), "processing bin", j, sep = " "))
-    vcf <- tibble(
-      `#CHROM` = character(),
-      POS = double(),
-      ID = character(),
-      REF = character(),
-      ALT = character(),
-      QUAL = double(),
-      FILTER = character(),
-      INFO = character()
-    )
+  vcf <- tibble(chrom = character(),
+               pos = double(),
+               ena_run = character(),
+               ref = character(),
+               alt = character(),
+               qual = double(),
+               filter = character(),
+               dp = character(),
+               af = character(),
+               sb = character(),
+               dp4 = character(),
+               ann = character(),
+               hrun = character(),
+               indel = character(),
+               lof = character(),
+               nmd = character())
 
 
     f_list <- ids %>%
       filter(bin == j)
     f_list <- as.character(f_list$ena_run)
     for (f in f_list) {
-      # print(paste(Sys.time(), "processing file", f, sep=" "))
-      if (file.size(paste(filepath, f, ".annot.vcf", sep = "")) != 0) {
+      #print(paste(Sys.time(), "processing file", paste(filepath, f, ".annot.vcf", sep = ""), sep=" "))
+      if (file.size(paste(filepath, f, ".annot.vcf", sep = ""))!=0) {
         vcf_file <- paste(filepath, f, ".annot.vcf", sep = "")
-        x <- read_tsv(file = vcf_file, skip = 20, col_names = TRUE, cols(
-          `#CHROM` = col_character(),
-          POS = col_double(),
-          ID = col_character(),
-          REF = col_character(),
-          ALT = col_character(),
-          QUAL = col_double(),
-          FILTER = col_character(),
-          INFO = col_character()
-        )) %>%
-          mutate(ID = f)
-        vcf <- rbind(vcf, x)
+            is_nanopore <- str_detect(read_lines(file = vcf_file, skip = 2, n_max = 1), pattern = "bam_to_vcf.py")
+            x <- read_tsv(file = vcf_file, comment="##", col_names=TRUE, na = c("", "NA", "."), cols(`#CHROM` = col_character(),
+                                                             POS = col_double(),
+                                                             ID = col_character(),
+                                                             REF = col_character(),
+                                                             ALT = col_character(),
+                                                             QUAL = col_double(),
+                                                             FILTER = col_character(),
+                                                             INFO = col_character())) %>%
+                    mutate(ID=f)
+
+            if (is_nanopore){
+                    x <- x %>%
+                        dplyr::rename(chrom = `#CHROM`,
+                        pos = POS,
+                        ena_run = ID,
+                        ref = REF,
+                        alt = ALT,
+                        qual = QUAL,
+                        filter = FILTER,
+                        info = INFO)%>%
+                        separate(col="info", into=c("dp", "af", "dp4", "ann", "indel", "lof", "nmd"), sep = ";", fill="right") %>%
+                        add_column(sb=NA, .after = "af")%>%
+                        add_column(hrun=NA, .before = "indel")
+
+              
+            } else {
+
+                    x <- x %>%
+                        dplyr::rename(chrom = `#CHROM`,
+                        pos = POS,
+                        ena_run = ID,
+                        ref = REF,
+                        alt = ALT,
+                        qual = QUAL,
+                        filter = FILTER,
+                        info = INFO)%>%
+                        separate(col="info", into=c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill="right")
+            }
+        vcf <- rbind(vcf,x)
       } else {
         print(paste(Sys.time(), "excluded empty file", f, sep = " "))
       }
     }
+
     if (nrow(vcf) != 0) {
       vcf <- vcf %>%
-        dplyr::rename(
-          chrom = `#CHROM`,
-          pos = POS,
-          ena_run = ID,
-          ref = REF,
-          alt = ALT,
-          qual = QUAL,
-          filter = FILTER,
-          info = INFO
-        ) %>%
-        separate(col = "info", into = c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill = "right")
-      vcf <- vcf %>%
-        mutate(ann = ifelse(vcf$ann == "INDEL", indel, ann)) %>%
-        mutate(indel = ifelse(!is.na(vcf$indel), TRUE, FALSE))
-      k <- max(str_count(vcf$ann, pattern = "\\,")) # maximum annotate version
-      a <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\,", n = k))
-      vcf <- cbind(vcf, a) %>%
-        select(-ann) %>%
-        pivot_longer(cols = names(a), values_to = "ann", names_to = "ann_num", values_drop_na = TRUE) %>%
-        filter(ann != "") %>%
-        mutate(ann_num = str_sub(ann_num, start = 2))
-      vcf$ann_num <- as.integer(vcf$ann_num)
-
-      x <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\|", n = 16), column_name = ann_name)
-      names(x) <- ann_name
-
+      mutate(ann = ifelse(vcf$ann=="INDEL", indel, ann)) %>%
+      mutate(indel = ifelse(!is.na(vcf$indel), TRUE, FALSE)) 
+    k <- max(str_count(vcf$ann, pattern = "\\,"), 1L  ) # maximum annotate version
+    a <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\,", n=k)  ) 
+    vcf <- cbind(vcf, a) %>%
+      select(-ann)%>%
+      pivot_longer(cols = names(a), values_to = "ann", names_to="ann_num", values_drop_na = TRUE) %>%
+      filter(ann!="") %>%
+      mutate(ann_num= str_sub(ann_num,start=2))
+    vcf$ann_num <- as.integer(vcf$ann_num)
+    
+    # x <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\|", n=16) , column_name = ann_name)
+    x <- data.frame(str_split_fixed(vcf$ann, pattern = "\\|", n=16))
+    #x <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\|", n=16), .name_repair = 'unique')
+    names(x) <- ann_name
 
       vcf <- vcf %>%
         mutate(dp4 = str_remove(dp4, pattern = "DP4=")) %>%
@@ -127,6 +154,7 @@ if (nrow(ids) != 0) {
       vcf$qual <- as.integer(vcf$qual)
       vcf$dp <- as.integer(vcf$dp)
       vcf$af <- as.numeric(vcf$af)
+      vcf <- dplyr::filter(vcf, af>=0.1)
       vcf$sb <- as.integer(vcf$sb)
       vcf$count_alt_forward_base <- as.integer(vcf$count_alt_forward_base)
       vcf$count_ref_reverse_base <- as.integer(vcf$count_ref_reverse_base)

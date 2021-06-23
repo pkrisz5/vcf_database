@@ -10,11 +10,11 @@ spec:
   - image: kooplex/k8plex-ei-jupyter-basic
     command:
       - sleep
-      - "36000"
+      - infinity
     name: postgres-python
     env:
       - name: SCHEMA_PATH
-        value: /x_scripts/repo/schema/
+        value: /mnt/repo/schema/
       - name: DB_PORT
         value: "5432"
       - name: SECRET_USERNAME
@@ -38,17 +38,10 @@ spec:
             name: pg-admin-ebi
             key: db
     volumeMounts:
-      - mountPath: /x_scripts
+      - mountPath: /mnt
         name: pv-x
-        subPath: scripts
-      - mountPath: /x_cov
-        name: pv-x
-        subPath: cov
-      - mountPath: /x_vcf
-        name: pv-x
-        subPath: vcf
   volumes:
     - name: pv-x
       persistentVolumeClaim:
-        claimName: pvc-kooplex
+        claimName: pvc-raw
 
