@@ -9,7 +9,7 @@ db = os.getenv('DB')
 
 p = os.getenv('SCHEMA_PATH', '/x_scripts')
 
-tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def' ]
+tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly' ]
 mviews = [ 'lineage', 'unique_ena_run_summary' ]
 
 def create_db(db):
