@@ -5,7 +5,7 @@ library(RPostgreSQL)
 print(paste(Sys.time(), "started...", sep = " "))
 
 data <- read_csv("https://opendata.ecdc.europa.eu/covid19/nationalcasedeath/csv")
-load("country_iso.Rdata")
+load("../data/country_iso.Rdata") #TODO: use env var to point to extra data folder
 
 data <- data %>%
      select(country_code, year_week, indicator, weekly_count) %>%
