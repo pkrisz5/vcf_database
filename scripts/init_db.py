@@ -16,6 +16,12 @@ def create_db(db):
     #return "SELECT 'CREATE DATABASE \"{0}\"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{0}')".format(db)
     return "CREATE DATABASE \"{0}\"".format(db)
 
+def create_user(user, pw):
+    return "CREATE USER \"{0}\" PASSWORD '{1}'".format(user, pw)
+
+def grant_read(user, db):
+    return [ "GRANT CONNECT ON DATABASE \"{1}\" TO \"{0}\"".format(user, db), "GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{0}\"".format(user) ]
+
 def db_exec(statement, transaction = True):
     try:
         print ("SQL: {}".format(statement))
@@ -57,13 +63,25 @@ if __name__ == '__main__':
 
     try:
         myConnection = con()
+        print ("connected to db {0}".format(db))
     except psycopg2.OperationalError as e:
         myConnection = con(None)
+        print ("connected to db engine to create db {0}".format(db))
         # create databases
         db_exec( create_db(db), transaction = False )
         myConnection.close()
+        print ("disconnected from db engine")
         myConnection = con()
+        print ("connected to db {0}".format(db))
     
+    # create user
+    statement = create_user(os.getenv('READONLY_USERNAME', 'kooplex-reader'), os.getenv('READONLY_PASSWORD', 'reader-pw'))
+    #db_exec( statement, transaction = False )
+
+    # grant read only right to user
+    for statement in grant_read(os.getenv('READONLY_USERNAME', 'kooplex-reader'), db):
+        db_exec( statement, transaction = True )
+
     # create tables
     for t in tables:
         statement = open(os.path.join(p, "table-{}.sql".format(t))).read()
