@@ -25,6 +25,7 @@ data <- data%>%
 fin <- country_iso %>%
      left_join(data)
 
+print(paste(Sys.time(), "parsed", sep=" ")) 
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       dbname = Sys.getenv(c("DB")),
@@ -33,6 +34,8 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       user = Sys.getenv(c("SECRET_USERNAME")),
                       password = Sys.getenv(c("SECRET_PASSWORD"))
 )
+dbSendQuery(con, "TRUNCATE TABLE ecdc_covid_country_weekly")
+print(paste(Sys.time(), "truncated table ecdc_covid_country_weekly", sep=" ")) 
 
 dbWriteTable(con, "ecdc_covid_country_weekly", fin , row.names = FALSE, overwrite = TRUE)
 
