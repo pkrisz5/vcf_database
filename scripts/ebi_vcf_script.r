@@ -18,14 +18,14 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
 
 # Downloads the ID of the already uploaded vcf files
 
-n <- tbl(con, "vcf") %>%
+n <- tbl(con, "vcf_all") %>%
   select(ena_run) %>%
   distinct() %>%
   collect()
 
 if (nrow(n) == 0) n <- tibble(ena_run = character())
 
-print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep = " "))
+print(paste(Sys.time(), "number of records in vcf_all table", nrow(n), sep = " "))
 
 # Selects the new vcf files and uploads them in bins
 
@@ -154,7 +154,7 @@ if (nrow(ids) != 0) {
       vcf$qual <- as.integer(vcf$qual)
       vcf$dp <- as.integer(vcf$dp)
       vcf$af <- as.numeric(vcf$af)
-      vcf <- dplyr::filter(vcf, af>=0.1)
+      #vcf <- dplyr::filter(vcf, af>=0.1)
       vcf$sb <- as.integer(vcf$sb)
       vcf$count_alt_forward_base <- as.integer(vcf$count_alt_forward_base)
       vcf$count_ref_reverse_base <- as.integer(vcf$count_ref_reverse_base)
@@ -162,17 +162,17 @@ if (nrow(ids) != 0) {
       vcf$count_ref_reverse_base <- as.integer(vcf$count_ref_reverse_base)
       vcf$hrun <- as.integer(vcf$hrun)
       vcf$distance <- as.integer(vcf$distance)
-      dbWriteTable(con, "vcf", vcf, append = TRUE, row.names = FALSE)
+      dbWriteTable(con, name = "vcf_all", value = vcf, append = TRUE, row.names = FALSE)
     }
   }
 }
 
 
-n <- tbl(con, "vcf") %>%
+n <- tbl(con, "vcf_all") %>%
   select(ena_run) %>%
   distinct() %>%
   collect()
 
 if (nrow(n) == 0) n <- tibble(ena_run = character())
 
-print(paste(Sys.time(), "number of records in vcf table", nrow(n), sep = " "))
+print(paste(Sys.time(), "number of records in vcf_all table", nrow(n), sep = " "))
