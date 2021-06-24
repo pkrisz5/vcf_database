@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS meta (
 	center_name text,
 	sample_capture_status text,
 	fastq_ftp text,
+	collection_date_submitted text,
 	checklist text,
-	date_week int
+	clean_collection_date date,
+	date_isoweek int,
+	date_isoyear int
+	
 );
