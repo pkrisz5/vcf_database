@@ -3,15 +3,16 @@
 exec 9>&1
 
 echo "$(date) cron runs $0 $@"
+SD=$(dirname $0)
 
 ###########################################
 ## stage 0
 ##  * unzip any tarbals in new folders
 ###########################################
 echo "$(date) check x_cov"
-./stg_0.sh /mnt/x_cov
+$SD/stg_0.sh /mnt/x_cov
 echo "$(date) check x_vcf"
-./stg_0.sh /mnt/x_vcf
+$SD/stg_0.sh /mnt/x_vcf
 
 ###########################################
 ## stage 1
