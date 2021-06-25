@@ -102,4 +102,8 @@ if __name__ == '__main__':
 #        statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
 #        db_exec( statement, transaction = True )
 
+#    # filter vcf above threshold
+#    db_exec( "TRUNCATE TABLE vcf", transaction = True )
+#    db_exec( "SELECT * INTO vcf FROM vcf_all WHERE (\"af\" >= 0.1)", transaction = False )
+
     myConnection.close()
