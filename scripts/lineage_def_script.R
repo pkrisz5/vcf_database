@@ -5,7 +5,7 @@ library(RPostgreSQL)
 print(paste(Sys.time(), "started...", sep = " "))
 
 
-load("../data/lineage_def.Rdata") #TODO: use env var to point to extra data folder
+load("/mnt/repo/data/lineage_def.Rdata") #TODO: use env var to point to extra data folder
 
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),

@@ -26,6 +26,7 @@ echo "$(date) TODO stage 1"
 ##  * vcf
 ##  * cov
 ##  * meta
+##  * lineage_def
 ###########################################
 echo "$(date) populate vcf"
 exec 1>> /mnt/logs/vcf_populate.log 2>&1
@@ -66,6 +67,15 @@ Rscript /mnt/repo/scripts/ebi_meta_script.r
 STATUS=$?
 echo "STOP $(date) exit status: $STATUS"
 exec 1>&9 
+
+echo "$(date) populate lineage_def"
+exec 1>> /mnt/logs/lineage_def.log 2>&1
+echo "START $(date)"
+Rscript /mnt/repo/scripts/lineage_def_script.R
+STATUS=$?
+echo "STOP $(date) exit status: $STATUS"
+exec 1>&9 
+
 
 exec 9>&-
 echo "$(date) cron finishes running $0 $@"
