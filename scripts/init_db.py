@@ -89,9 +89,11 @@ if __name__ == '__main__':
     
 #    # create indexes
 #    for statement in [
-#        "CREATE INDEX IF NOT EXISTS idx_vcf_af on vcf(af);",
+#        "CREATE INDEX IF NOT EXISTS idx_vcf_af on vcf(af)",
 #        "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p on vcf(hgvs_p)",
-#        "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage on cov(pos, coverage);",
+#        "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage on cov(pos, coverage)",
+#        "CREATE INDEX IF NOT EXISTS idx_vcf_pos on vcf(pos)",
+#        "CREATE INDEX IF NOT EXISTS idx_vcf_ena_run on vcf(ena_run)",
 #    ]:
 #        db_exec( statement, transaction = True )
 #    
