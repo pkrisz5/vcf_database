@@ -162,17 +162,24 @@ if (nrow(ids) != 0) {
       vcf$count_ref_reverse_base <- as.integer(vcf$count_ref_reverse_base)
       vcf$hrun <- as.integer(vcf$hrun)
       vcf$distance <- as.integer(vcf$distance)
-      dbWriteTable(con, name = "vcf_all", value = vcf, append = TRUE, row.names = FALSE)
+      dbWriteTable(con, name = "vcf_all_append", value = vcf, append = TRUE, row.names = FALSE)
+
+      # Remove those tmp files that are successfully appended to table
+      for (f in f_list) {
+       file.remove(paste(filepath, f, ".annot.vcf", sep = ""))
+      }
+      print(paste(Sys.time(), "files removed, loop next", sep = " "))
     }
   }
 }
 
 
-n <- tbl(con, "vcf_all") %>%
+n <- tbl(con, "vcf_all_append") %>%
   select(ena_run) %>%
   distinct() %>%
   collect()
 
 if (nrow(n) == 0) n <- tibble(ena_run = character())
 
-print(paste(Sys.time(), "number of records in vcf_all table", nrow(n), sep = " "))
+print(paste(Sys.time(), "number of records in vcf_all_append table", nrow(n), sep = " "))
+

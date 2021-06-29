@@ -2,6 +2,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import os
 import sys
+import datetime
 
 host = os.getenv('DB_HOST')
 port = os.getenv('DB_PORT', 5432)
@@ -24,7 +25,8 @@ def grant_read(user, db):
 
 def db_exec(statement, transaction = True):
     try:
-        print ("SQL: {}".format(statement))
+        t0 = datetime.datetime.now()
+        print ("{0} SQL: {1}".format(t0, statement))
         cur = None
         cur = myConnection.cursor()
         cur.execute( statement )
@@ -39,6 +41,8 @@ def db_exec(statement, transaction = True):
     finally:
         if cur:
             cur.close()
+        t1 = datetime.datetime.now()
+        print ("{0} the duration of running statement {1}".format(t1, t1 - t0))
 
 def con(db = db):
     if db:
@@ -74,18 +78,18 @@ if __name__ == '__main__':
         myConnection = con()
         print ("connected to db {0}".format(db))
     
-    # create user
-    statement = create_user(os.getenv('READONLY_USERNAME', 'kooplex-reader'), os.getenv('READONLY_PASSWORD', 'reader-pw'))
-    #db_exec( statement, transaction = False )
+#    # create user
+#    statement = create_user(os.getenv('READONLY_USERNAME', 'kooplex-reader'), os.getenv('READONLY_PASSWORD', 'reader-pw'))
+#    #db_exec( statement, transaction = False )
 
-    # grant read only right to user
-    for statement in grant_read(os.getenv('READONLY_USERNAME', 'kooplex-reader'), db):
-        db_exec( statement, transaction = True )
+#    # grant read only right to user
+#    for statement in grant_read(os.getenv('READONLY_USERNAME', 'kooplex-reader'), db):
+#        db_exec( statement, transaction = True )
 
-    # create tables
-    for t in tables:
-        statement = open(os.path.join(p, "table-{}.sql".format(t))).read()
-        db_exec( statement, transaction = True )
+#    # create tables
+#    for t in tables:
+#        statement = open(os.path.join(p, "table-{}.sql".format(t))).read()
+#        db_exec( statement, transaction = True )
     
 #    # create indexes
 #    for statement in [
@@ -96,7 +100,26 @@ if __name__ == '__main__':
 #        "CREATE INDEX IF NOT EXISTS idx_vcf_ena_run on vcf(ena_run)",
 #    ]:
 #        db_exec( statement, transaction = True )
-#    
+    
+    # filter vcf_all above threshold
+    db_exec( "TRUNCATE TABLE IF EXISTS vcf_append", transaction = True )
+    db_exec( "SELECT * INTO vcf_append FROM vcf_all_append WHERE (\"af\" >= 0.1)", transaction = False )
+
+    # create indexes
+    for statement in [
+        "CREATE INDEX IF NOT EXISTS idx_vcf_af_ on vcf_append(af)",
+        "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p_ on vcf_append(hgvs_p)",
+        "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage_ on cov_append(pos, coverage)",
+        "CREATE INDEX IF NOT EXISTS idx_vcf_pos_ on vcf_append(pos)",
+        "CREATE INDEX IF NOT EXISTS idx_vcf_ena_run_ on vcf_append(ena_run)",
+    ]:
+        db_exec( statement, transaction = True )
+
+#    # create materialized views
+#    for v in mviews:
+#        statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
+#        db_exec( statement, transaction = True )
+
 #    # create materialized views
 #    for v in mviews:
 #        statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
@@ -105,5 +128,11 @@ if __name__ == '__main__':
 #    # filter vcf above threshold
 #    db_exec( "TRUNCATE TABLE vcf", transaction = True )
 #    db_exec( "SELECT * INTO vcf FROM vcf_all WHERE (\"af\" >= 0.1)", transaction = False )
+
+    # copy production tables for appending new data
+    db_exec( "DROP TABLE IF EXISTS vcf_all_append", transaction = True )
+    db_exec( "CREATE TABLE vcf_all_append AS SELECT * FROM vcf_all", transaction = True )
+    db_exec( "DROP TABLE IF EXISTS cov_append", transaction = True )
+    db_exec( "CREATE TABLE cov_append AS SELECT * FROM cov", transaction = True )
 
     myConnection.close()

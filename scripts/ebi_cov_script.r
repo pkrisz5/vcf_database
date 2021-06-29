@@ -68,17 +68,23 @@ if (nrow(ids) != 0) {
         select(ena_run, pos, coverage)
 
       print(paste(Sys.time(), "appending", nrow(cov), " records in cov", sep = " "))
-      dbWriteTable(con, "cov", cov, append = TRUE, row.names = FALSE)
+      dbWriteTable(con, "cov_append", cov, append = TRUE, row.names = FALSE)
+
+      # Remove those tmp files that are successfully appended to table
+      for (f in x) {
+       file.remove(paste(filepath, f, ".coverage", sep = ""))
+      }
+      print(paste(Sys.time(), "files removed, loop next", sep = " "))
     }
   }
 }
 
-n <- tbl(con, "cov") %>%
+n <- tbl(con, "cov_append") %>%
   select(ena_run) %>%
   distinct() %>%
   collect()
 
 if (nrow(n) == 0) n <- tibble(ena_run = character())
 
-print(paste(Sys.time(), "number of records in table cov", nrow(n), sep = " "))
+print(paste(Sys.time(), "number of records in table cov_append", nrow(n), sep = " "))
 

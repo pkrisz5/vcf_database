@@ -19,6 +19,8 @@ $SD/stg_0.sh /mnt/x_vcf
 ##  * 
 ###########################################
 echo "$(date) TODO stage 1"
+## init_db.py create_table_as
+
 
 ###########################################
 ## stage 2
@@ -75,6 +77,34 @@ Rscript /mnt/repo/scripts/lineage_def_script.R
 STATUS=$?
 echo "STOP $(date) exit status: $STATUS"
 exec 1>&9 
+
+
+###########################################
+## stage 3
+###########################################
+echo "$(date) TODO stage 3"
+## init_db.py create_index
+
+
+###########################################
+## stage 4
+###########################################
+echo "$(date) TODO stage 4"
+## init_db.py rename
+
+
+###########################################
+## stage 5
+###########################################
+echo "$(date) TODO stage 5"
+## init_db.py create_materialized_views
+
+
+###########################################
+## stage 6
+###########################################
+echo "$(date) TODO stage 6"
+## init_db.py grant_select
 
 
 exec 9>&-
