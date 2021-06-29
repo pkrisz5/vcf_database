@@ -103,7 +103,7 @@ if __name__ == '__main__':
         myConnection.close()
         print ("{} disconnected from db engine".format(datetime.datetime.now()))
 
-    myConnection = con()
+    myConnection = con(db)
     print ("{0} connected to db {1}".format(datetime.datetime.now(), db))
 
     # create user
