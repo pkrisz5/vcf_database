@@ -31,10 +31,10 @@ def db_exec(statement, transaction, fetch):
             cur.close()
         t1 = datetime.datetime.now()
         print ("{0} the duration of running statement {1}".format(t1, t1 - t0), file = sys.stderr)
-        #if response:
-        #    for r in response:
-        #        if 'event_ts' in r:
-        #            r['event_ts'] = r['event_ts'].isoformat()
+        if response:
+            for r in response:
+                if 'event_ts' in r:
+                    r['event_ts'] = r['event_ts'].isoformat()
         return response
 
 
@@ -126,19 +126,15 @@ if __name__ == '__main__':
             resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_ts DESC LIMIT 1", transaction = False, fetch = True)
             assert resp[0]['exit_code'] == 0, 'Last command was not exited cleanly'
             assert resp[0]['stage'] == 2, 'Stage mismatch'
-            resp = db_exec("SELECT event_ts FROM operation WHERE exit_code = 0 AND stage = 1 DESC ORDER BY event_ts LIMIT 1", transaction = False, fetch = True)
+            resp = db_exec("SELECT event_ts FROM operation WHERE exit_code = 0 AND stage = 1 ORDER BY event_ts DESC LIMIT 1", transaction = False, fetch = True)
             t0 = resp[0]['event_ts']
-            resp = db_exec("SELECT * FROM operation WHERE exit_code = 0 AND stage = 2 AND event_ts > {} ORDER BY event_ts".format(t0), transaction = False, fetch = True)
-
-            print (resp)
-
+            resp = db_exec("SELECT * FROM operation WHERE exit_code = 0 AND stage = 2 AND event_ts > '{}'".format(t0), transaction = False, fetch = True)
             n = 0
             for r in resp:
                 jsr = json.loads(r['extra_info'])
-                if pargs.source in jsr['command']: 
+                if args.source in jsr['command']: 
                     n += jsr['n_files']
             print (n)
-    
     
     finally:
         myConnection.close()
