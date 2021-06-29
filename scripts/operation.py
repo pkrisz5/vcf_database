@@ -1,5 +1,5 @@
-#import psycopg2
-#import psycopg2.extras
+import psycopg2
+import psycopg2.extras
 import json
 import os
 import sys
@@ -84,7 +84,11 @@ if __name__ == '__main__':
             help = 'make sure the current stage is matched')
 
     args = parser.parse_args()
-    command = args.action()
+    try:
+        command = args.action()
+    except:
+        print ("make sure {0} is run with proper command line argiments".format(sys.argv[0]), file = sys.stderr)
+        raise
 
     myConnection = con(db)
     print ("{0} connected to db {1}".format(datetime.datetime.now(), db), file = sys.stderr)
