@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS operation (
-	event_date date,
+	event_ts timestamp,
 	last_stage int,
 	last_exit_code int,
 	stage int,
