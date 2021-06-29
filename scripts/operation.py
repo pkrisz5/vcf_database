@@ -58,9 +58,6 @@ if __name__ == '__main__':
 ## 	extra_info text -- json encoded information
 ## );
     parser = argparse.ArgumentParser()
-    #parser.add_argument("-c", "--command", choices = [ 'init', 'truncate', 'dump', 'append', 'get' ], default = 'get',
-    #                help = "operation command")
-
     subparsers = parser.add_subparsers(help = 'Choose a command')
     init_parser = subparsers.add_parser('init', help = '"init" help')
     init_parser.set_defaults(action = lambda: 'init')
@@ -82,6 +79,10 @@ if __name__ == '__main__':
     assert_parser.set_defaults(action = lambda: 'assert')
     assert_parser.add_argument('-s', '--stage', required = True, type = int, 
             help = 'make sure the current stage is matched')
+    newrecords_parser = subparsers.add_parser('newrecords', help = '"newrecords" help')
+    newrecords_parser.set_defaults(action = lambda: 'newrecords')
+    newrecords_parser.add_argument('-t', '--source', required = True, choices = [ 'cov', 'vcf' ],
+            help = 'get the number of new record files for given source')
 
     args = parser.parse_args()
     try:
@@ -120,6 +121,23 @@ if __name__ == '__main__':
             resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
             assert resp[0]['exit_code'] == 0, 'Last command was not exited cleanly'
             assert resp[0]['stage'] == args.stage, 'Stage mismatch'
+
+        if command == 'newrecords':
+            resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
+            assert resp[0]['exit_code'] == 0, 'Last command was not exited cleanly'
+            assert resp[0]['stage'] == 2, 'Stage mismatch'
+            resp = db_exec("SELECT event_date FROM operation WHERE exit_code = 0 AND stage = 1 DESC ORDER BY event_date LIMIT 1", transaction = False, fetch = True)
+            t0 = resp[0]['event_date']
+            resp = db_exec("SELECT * FROM operation WHERE exit_code = 0 AND stage = 2 AND event_date > {} ORDER BY event_date".format(t0), transaction = False, fetch = True)
+
+            print (resp)
+
+            n = 0
+            for r in resp:
+                jsr = json.loads(r['extra_info'])
+                if pargs.source in jsr['command']: 
+                    n += jsr['n_files']
+            print (n)
     
     
     finally:

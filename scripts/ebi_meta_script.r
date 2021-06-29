@@ -76,16 +76,16 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       user = Sys.getenv(c("SECRET_USERNAME")),
                       password = Sys.getenv(c("SECRET_PASSWORD"))
 )
-dbSendQuery(con, "TRUNCATE TABLE meta")
-print(paste(Sys.time(), "truncated table meta", sep=" ")) 
+dbSendQuery(con, "TRUNCATE TABLE meta_append")
+print(paste(Sys.time(), "truncated table meta_append", sep=" ")) 
 
-dbWriteTable(con, "meta", clean_meta , append = TRUE, row.names = FALSE)
+dbWriteTable(con, "meta_append", clean_meta , append = TRUE, row.names = FALSE)
 
 n <- tbl(con, "meta") %>% 
   count()%>%
   collect
 
-print(paste(Sys.time(), "wrote", n$n, "records in table meta", sep=" ")) 
+print(paste(Sys.time(), "wrote", n$n, "records in table meta_append", sep=" ")) 
 
 if (n$n == 0) {
   q(status = 1)

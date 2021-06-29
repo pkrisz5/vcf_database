@@ -1,6 +1,6 @@
 import psycopg2
-import re
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+import re
 import os
 import sys
 import datetime
@@ -132,6 +132,8 @@ if __name__ == '__main__':
         db_exec( "CREATE TABLE vcf_all_append AS SELECT * FROM vcf_all", transaction = True )
         db_exec( "DROP TABLE IF EXISTS cov_append", transaction = True )
         db_exec( "CREATE TABLE cov_append AS SELECT * FROM cov", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS meta_append", transaction = True )
+        db_exec( "CREATE TABLE meta_append AS SELECT * FROM meta", transaction = True ) #FIXME: CREATE wo any DATA
 
     # filter vcf_all above threshold
     if args.filter_vcf:
@@ -166,6 +168,7 @@ if __name__ == '__main__':
             if args.operate_on_append:
                 statement = re.sub('(FROM cov)', '\1_append', statement )
                 statement = re.sub('(FROM vcf)', '\1_append', statement )
+                statement = re.sub('(FROM meta)', '\1_append', statement )
             db_exec( statement, transaction = True )
 
     # rename tables
@@ -173,9 +176,11 @@ if __name__ == '__main__':
         db_exec( "DROP TABLE IF EXISTS vcf_all CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS vcf CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS cov CASCADE", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS meta CASCADE", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS vcf_all_append RENAME TO vcf_all", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS vcf_append RENAME TO vcf", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS cov_append RENAME TO cov", transaction = True )
+        db_exec( "ALTER TABLE IF EXISTS meta_append RENAME TO meta", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_af_ RENAME TO idx_vcf_af", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_hgvs_p_ RENAME TO idx_vcf_hgvs_p", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_cov_pos_coverage_ RENAME TO idx_cov_pos_coverage", transaction = True )
