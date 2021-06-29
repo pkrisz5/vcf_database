@@ -90,36 +90,38 @@ if __name__ == '__main__':
         print ("make sure {0} is run with proper command line argiments".format(sys.argv[0]), file = sys.stderr)
         raise
 
-    myConnection = con(db)
-    print ("{0} connected to db {1}".format(datetime.datetime.now(), db), file = sys.stderr)
-
-    if command == 'init':
-        resp = db_exec("SELECT * FROM operation", transaction = False, fetch = True)
-        assert len(resp) == 0, "Table operation must be initialized already"
-        db_exec("INSERT INTO operation (event_date, last_stage, last_exit_code, stage, exit_code, extra_info) VALUES ('{0}', -1, -1, 0, 0, '{1}')".format(datetime.datetime.now(), {}), transaction = True, fetch = False)
-
-    if command == 'truncate':
-        db_exec("TRUNCATE TABLE operation", transactio = True, fetch = False)
-
-    if command == 'append':
-        resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
-        print (json.dumps(resp[0]))
-        db_exec("INSERT INTO operation (event_date, last_stage, last_exit_code, stage, exit_code, extra_info) VALUES ('{0}', {1}, {2}, {3}, {4}, '{5}')".format(
-            datetime.datetime.now(), resp[0]['stage'], resp[0]['exit_code'], args.stage, args.code, args.extra
-            ), transaction = True, fetch = False)
-
-    if command == 'dump':
-        print (db_exec("SELECT * FROM operation ORDER BY event_date DESC", transaction = False, fetch = True))
-
-    if command == 'get':
-        resp = db_exec("SELECT * FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
-        print (json.dumps(resp[0]))
-
-    if command == 'assert':
-        resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
-        assert resp[0]['exit_code'] == 0, 'Last command was not exited cleanly'
-        assert resp[0]['stage'] == args.stage, 'Stage mismatch'
-
-
-    myConnection.close()
-    print ("{} disconnected from db engine".format(datetime.datetime.now()), file = sys.stderr)
+    try:
+        myConnection = con(db)
+        print ("{0} connected to db {1}".format(datetime.datetime.now(), db), file = sys.stderr)
+    
+        if command == 'init':
+            resp = db_exec("SELECT * FROM operation", transaction = False, fetch = True)
+            assert len(resp) == 0, "Table operation must be initialized already"
+            db_exec("INSERT INTO operation (event_date, last_stage, last_exit_code, stage, exit_code, extra_info) VALUES ('{0}', -1, -1, 0, 0, '{1}')".format(datetime.datetime.now(), {}), transaction = True, fetch = False)
+    
+        if command == 'truncate':
+            db_exec("TRUNCATE TABLE operation", transactio = True, fetch = False)
+    
+        if command == 'append':
+            resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
+            print (json.dumps(resp[0]))
+            db_exec("INSERT INTO operation (event_date, last_stage, last_exit_code, stage, exit_code, extra_info) VALUES ('{0}', {1}, {2}, {3}, {4}, '{5}')".format(
+                datetime.datetime.now(), resp[0]['stage'], resp[0]['exit_code'], args.stage, args.code, args.extra
+                ), transaction = True, fetch = False)
+    
+        if command == 'dump':
+            print (db_exec("SELECT * FROM operation ORDER BY event_date DESC", transaction = False, fetch = True))
+    
+        if command == 'get':
+            resp = db_exec("SELECT * FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
+            print (json.dumps(resp[0]))
+    
+        if command == 'assert':
+            resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
+            assert resp[0]['exit_code'] == 0, 'Last command was not exited cleanly'
+            assert resp[0]['stage'] == args.stage, 'Stage mismatch'
+    
+    
+    finally:
+        myConnection.close()
+        print ("{} disconnected from db engine".format(datetime.datetime.now()), file = sys.stderr)
