@@ -66,26 +66,24 @@ def con(db = db):
         return c
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.parse_args()
-
     tc = tables[:]
     tc.append('all')
 
+    parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--init_db", action = "store_true",
                     help = "create database")
     parser.add_argument("-u", "--create_user", action = "store_true",
                     help = "create a database user")
     parser.add_argument("-a", "--grant_access", action = "store_true",
                     help="grant read only right to database user")
-    parser.add_argument("-t", "--create_table", choices = tc, default = 'all',
+    parser.add_argument("-t", "--create_table", choices = tc,
                      help = "create a table")
     parser.add_argument("-p", "--create_tables_append", action = "store_true",
                      help = "create a copy table of vcf and cov to append new data")
     #parser.add_argument("-D", "--drop_table", choices = tc,
     #                 help = "drop a table")
-    parser.add_argument("-f", "--filter_vcf", type = float, default = .1,
-                    help = "filter vcf_all_append")
+    parser.add_argument("-f", "--filter_vcf",
+                    help = "filter vcf_all_append (recent consensus af>.1)")
     parser.add_argument("-i", "--create_indexes", action = "store_true",
                     help = "create table indexes on *_append")
     parser.add_argument("-r", "--rename_tables", action = "store_true",
@@ -94,17 +92,19 @@ if __name__ == '__main__':
                     help = "create materialized_views")
     parser.add_argument("-A", "--mv_on_append", action = "store_true",
                     help = "create materialized_views on *_append")
+    args = parser.parse_args()
+
 
     # create databases
     if args.init_db:
         myConnection = con(None)
-        print ("connected to db engine to create db {0}".format(db))
+        print ("{0} connected to db engine to create db {1}".format(datetime.datetime.now(), db))
         db_exec( create_db(db), transaction = False )
         myConnection.close()
-        print ("disconnected from db engine")
+        print ("{} disconnected from db engine".format(datetime.datetime.now()))
 
     myConnection = con()
-    print ("connected to db {0}".format(db))
+    print ("{0} connected to db {1}".format(datetime.datetime.now(), db))
 
     # create user
     if args.create_user:
@@ -174,3 +174,4 @@ if __name__ == '__main__':
 
 
     myConnection.close()
+    print ("{} disconnected from db engine".format(datetime.datetime.now()))
