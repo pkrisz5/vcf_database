@@ -133,7 +133,8 @@ if __name__ == '__main__':
         db_exec( "DROP TABLE IF EXISTS cov_append", transaction = True )
         db_exec( "CREATE TABLE cov_append AS SELECT * FROM cov", transaction = True )
         db_exec( "DROP TABLE IF EXISTS meta_append", transaction = True )
-        db_exec( "CREATE TABLE meta_append AS SELECT * FROM meta", transaction = True ) #FIXME: CREATE wo any DATA
+        #db_exec( "CREATE TABLE meta_append AS SELECT * FROM meta", transaction = True )
+        db_exec( "CREATE TABLE meta_append AS TABLE meta WITH NO DATA", transaction = True )
 
     # filter vcf_all above threshold
     if args.filter_vcf:
