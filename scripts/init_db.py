@@ -90,8 +90,8 @@ if __name__ == '__main__':
                     help = "rename *_append tables")
     parser.add_argument("-m", "--create_materialized_views", action = "store_true",
                     help = "create materialized_views")
-    parser.add_argument("-A", "--mv_on_append", action = "store_true",
-                    help = "create materialized_views on *_append")
+    parser.add_argument("-A", "--operate_on_append", action = "store_true",
+                    help = "operate on *_append")
     args = parser.parse_args()
 
 
@@ -140,20 +140,30 @@ if __name__ == '__main__':
 
     # create indexes
     if args.create_indexes:
-        for statement in [
-            "CREATE INDEX IF NOT EXISTS idx_vcf_af_ on vcf_append(af)",
-            "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p_ on vcf_append(hgvs_p)",
-            "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage_ on cov_append(pos, coverage)",
-            "CREATE INDEX IF NOT EXISTS idx_vcf_pos_ on vcf_append(pos)",
-            "CREATE INDEX IF NOT EXISTS idx_vcf_ena_run_ on vcf_append(ena_run)",
-        ]:
-            db_exec( statement, transaction = True )
+        if args.operate_on_append:
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS idx_vcf_af_ on vcf_append(af)",
+                "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p_ on vcf_append(hgvs_p)",
+                "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage_ on cov_append(pos, coverage)",
+                "CREATE INDEX IF NOT EXISTS idx_vcf_pos_ on vcf_append(pos)",
+                "CREATE INDEX IF NOT EXISTS idx_vcf_ena_run_ on vcf_append(ena_run)",
+            ]:
+                db_exec( statement, transaction = True )
+        else:
+            for statement in [
+                "CREATE INDEX IF NOT EXISTS idx_vcf_af on vcf(af)",
+                "CREATE INDEX IF NOT EXISTS idx_vcf_hgvs_p on vcf(hgvs_p)",
+                "CREATE INDEX IF NOT EXISTS idx_cov_pos_coverage on cov(pos, coverage)",
+                "CREATE INDEX IF NOT EXISTS idx_vcf_pos on vcf(pos)",
+                "CREATE INDEX IF NOT EXISTS idx_vcf_ena_run on vcf(ena_run)",
+            ]:
+                db_exec( statement, transaction = True )
 
     # create materialized views
     if args.create_materialized_views:
         for v in mviews:
             statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
-            if args.mv_on_append:
+            if args.operate_on_append:
                 statement = re.sub('(FROM cov)', '\1_append', statement )
                 statement = re.sub('(FROM vcf)', '\1_append', statement )
             db_exec( statement, transaction = True )
