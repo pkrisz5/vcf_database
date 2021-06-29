@@ -78,6 +78,10 @@ if __name__ == '__main__':
             help = 'set exit code')
     append_parser.add_argument('-e', '--extra', required = True, 
             help = 'set json serialized extra information')
+    assert_parser = subparsers.add_parser('assert', help = '"assert" help')
+    assert_parser.set_defaults(action = lambda: 'assert')
+    assert_parser.add_argument('-s', '--stage', required = True, type = int, 
+            help = 'make sure the current stage is matched')
 
     args = parser.parse_args()
     command = args.action()
@@ -106,6 +110,12 @@ if __name__ == '__main__':
     if command == 'get':
         resp = db_exec("SELECT * FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
         print (json.dumps(resp[0]))
+
+    if command == 'assert':
+        resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_date DESC LIMIT 1", transaction = False, fetch = True)
+        assert resp[0]['exit_code'] == 0, 'Last command was not exited cleanly'
+        assert resp[0]['stage'] == args.stage, 'Stage mismatch'
+
 
     myConnection.close()
     print ("{} disconnected from db engine".format(datetime.datetime.now()), file = sys.stderr)
