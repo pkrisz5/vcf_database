@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--list_tables", action = "store_true", help = "list tables")
     parser.add_argument("-i", "--list_indexes", action = "store_true", help = "list indexes")
-    #parser.add_argument("-v", "--list_materialized_views", action = "store_true", help = "list materialized_views")
+    parser.add_argument("-v", "--list_materialized_views", action = "store_true", help = "list materialized_views")
     parser.add_argument("-c", "--count", type = str, help = "count records in the table")
     parser.add_argument("-s", "--schema", type = str, help = "describe columns of the table")
     parser.add_argument("-S", "--top10", type = str, help = "select 10 records of the table")
@@ -72,6 +72,14 @@ SELECT table_name
 FROM information_schema.tables
 WHERE table_schema = 'public'
 ORDER BY table_name
+            """
+            db_exec(con, statement, False, True)
+
+        if args.list_materialized_views:
+            statement = """
+SELECT schemaname AS schema_name, matviewname AS view_name, matviewowner AS owner, ispopulated AS is_populated, definition
+FROM pg_matviews
+ORDER BY schema_name, view_name
             """
             db_exec(con, statement, False, True)
     
