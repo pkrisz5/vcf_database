@@ -101,7 +101,7 @@ if __name__ == '__main__':
             db_exec("INSERT INTO operation (event_ts, last_stage, last_exit_code, stage, exit_code, extra_info) VALUES ('{0}', -1, -1, 0, 0, '{1}')".format(datetime.datetime.now(), {}), transaction = True, fetch = False)
     
         if command == 'truncate':
-            db_exec("TRUNCATE TABLE operation", transactio = True, fetch = False)
+            db_exec("TRUNCATE TABLE operation", transaction = True, fetch = False)
     
         if command == 'append':
             resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_ts DESC LIMIT 1", transaction = False, fetch = True)
