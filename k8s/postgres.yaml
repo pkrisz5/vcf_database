@@ -38,9 +38,10 @@ spec:
           name: pg-admin-ebi
           key: admin
     volumeMounts:
-      - mountPath: /var/lib/postgresql
+      - mountPath: /var/lib/postgresql/data
         name: svcdata
+        subPath: data
   volumes:
     - name: svcdata
       persistentVolumeClaim:
-        claimName: pvc-kooplex-postgres
+        claimName: pvc-postgres
