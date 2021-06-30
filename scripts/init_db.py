@@ -194,6 +194,8 @@ if __name__ == '__main__':
         db_exec( "ALTER INDEX IF EXISTS idx_cov_pos_coverage_ RENAME TO idx_cov_pos_coverage", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_pos_ RENAME TO idx_vcf_pos", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_ena_run_ RENAME TO idx_vcf_ena_run", transaction = True )
+        db_exec( "ALTER MATERIALIZED VIEW IF EXISTS lineage_append RENAME TO lineage", transaction = True )
+        db_exec( "ALTER MATERIALIZED VIEW IF EXISTS unique_ena_run_summary_append RENAME TO unique_ena_run_summary", transaction = True )
 
 
     myConnection.close()
