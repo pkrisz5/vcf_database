@@ -18,12 +18,13 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
 
 # Downloads the ID of the already uploaded vcf files
 
-n <- tbl(con, "vcf_all") %>%
+n <- tbl(con, "unique_vcf_append") %>%
   select(ena_run) %>%
-  distinct() %>%
   collect()
-
 if (nrow(n) == 0) n <- tibble(ena_run = character())
+
+# count how many files (aka ena_run) are uploaded
+N <- 0
 
 print(paste(Sys.time(), "number of records in vcf_all table", nrow(n), sep = " "))
 
@@ -65,7 +66,17 @@ if (nrow(ids) != 0) {
     f_list <- ids %>%
       filter(bin == j)
     f_list <- as.character(f_list$ena_run)
+
+    unique_vcf <- tibble(insertion_ts = character(), ena_run = character(), snapshot = character(), integrity = integer())
+    ts <- Sys.time() 
+    r <- 0
     for (f in f_list) {
+	    
+      r <- r+1
+      unique_vcf[r, 'insertion_ts'] <- ts
+      unique_vcf[r, 'ena_run'] <- f
+      unique_vcf[r, 'snapshot'] <- filepath
+
       #print(paste(Sys.time(), "processing file", paste(filepath, f, ".annot.vcf", sep = ""), sep=" "))
       if (file.size(paste(filepath, f, ".annot.vcf", sep = ""))!=0) {
         vcf_file <- paste(filepath, f, ".annot.vcf", sep = "")
@@ -109,8 +120,10 @@ if (nrow(ids) != 0) {
                         separate(col="info", into=c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill="right")
             }
         vcf <- rbind(vcf,x)
+          unique_vcf[r, 'integrity'] <- 0
       } else {
         print(paste(Sys.time(), "excluded empty file", f, sep = " "))
+          unique_vcf[r, 'integrity'] <- 1
       }
     }
 
@@ -163,6 +176,8 @@ if (nrow(ids) != 0) {
       vcf$hrun <- as.integer(vcf$hrun)
       vcf$distance <- as.integer(vcf$distance)
       dbWriteTable(con, name = "vcf_all_append", value = vcf, append = TRUE, row.names = FALSE)
+      dbWriteTable(con, "unique_vcf_append", unique_vcf, append = TRUE, row.names = FALSE)
+      N <- N + r
 
       # Remove those tmp files that are successfully appended to table
       for (f in f_list) {
@@ -174,12 +189,5 @@ if (nrow(ids) != 0) {
 }
 
 
-n <- tbl(con, "vcf_all_append") %>%
-  select(ena_run) %>%
-  distinct() %>%
-  collect()
-
-if (nrow(n) == 0) n <- tibble(ena_run = character())
-
-print(paste(Sys.time(), "number of records in vcf_all_append table", nrow(n), sep = " "))
+print(paste(Sys.time(), "number of records appended to vcf_all_appende", N, sep = " "))
 

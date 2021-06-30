@@ -16,13 +16,13 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
 
 # Downloads the ID of the already uploaded coverage files
 
-n <- tbl(con, "cov") %>%
+n <- tbl(con, "unique_cov_append") %>%
   select(ena_run) %>%
-  distinct() %>%
   collect()
-
-
 if (nrow(n) == 0) n <- tibble(ena_run = character())
+
+# count how many files (aka ena_run) are uploaded
+N <- 0
 
 print(paste(Sys.time(), "number of sample records aready in tabe cov before update", nrow(n), sep = " "))
 
@@ -45,7 +45,18 @@ if (nrow(ids) != 0) {
     x <- ids %>%
       filter(bin == j)
     x <- as.character(x$ena_run)
+
+    unique_cov <- tibble(insertion_ts = character(), ena_run = character(), snapshot = character(), integrity = integer())
+    ts <- Sys.time() 
+    r <- 0
+
     for (i in x) {
+	    
+      r <- r+1
+      unique_cov[r, 'insertion_ts'] <- ts
+      unique_cov[r, 'ena_run'] <- i
+      unique_cov[r, 'snapshot'] <- filepath
+
       if (file.size(paste(filepath, i, ".coverage", sep = "")) != 0) {
         temp <- read_csv(paste(filepath, i, ".coverage", sep = ""),
           col_names = c("id", "ref", i),
@@ -53,11 +64,14 @@ if (nrow(ids) != 0) {
         )
         if (ncol(temp != 0) & nrow(temp) == 29903) {
           cov <- cbind(cov, temp[3])
+          unique_cov[r, 'integrity'] <- 0
         } else {
           print(paste(Sys.time(), "excluded incomplete file:", i, sep = " "))
+          unique_cov[r, 'integrity'] <- 2
         }
       } else {
         print(paste(Sys.time(), "excluded empty file:", i, sep = " "))
+          unique_cov[r, 'integrity'] <- 1
       }
     }
     if (ncol(cov) != 1) {
@@ -69,6 +83,8 @@ if (nrow(ids) != 0) {
 
       print(paste(Sys.time(), "appending", nrow(cov), " records in cov", sep = " "))
       dbWriteTable(con, "cov_append", cov, append = TRUE, row.names = FALSE)
+      dbWriteTable(con, "unique_cov_append", unique_cov, append = TRUE, row.names = FALSE)
+      N <- N + r
 
       # Remove those tmp files that are successfully appended to table
       for (f in x) {
@@ -79,12 +95,6 @@ if (nrow(ids) != 0) {
   }
 }
 
-n <- tbl(con, "cov_append") %>%
-  select(ena_run) %>%
-  distinct() %>%
-  collect()
 
-if (nrow(n) == 0) n <- tibble(ena_run = character())
-
-print(paste(Sys.time(), "number of records in table cov_append", nrow(n), sep = " "))
+print(paste(Sys.time(), "number of records appended to cov_append", N, sep = " "))
 

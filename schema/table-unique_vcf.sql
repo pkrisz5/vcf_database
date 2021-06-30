@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS unique_vcf (
 	insertion_ts timestamp,
-	ena_run_id varchar(16),
-	snapshot_date date,
+	ena_run varchar(16),
+	snapshot varchar(32),
 	integrity int -- 0: okay, 1: empty, 2: junk
 );

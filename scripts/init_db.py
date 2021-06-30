@@ -135,6 +135,10 @@ if __name__ == '__main__':
         db_exec( "DROP TABLE IF EXISTS meta_append", transaction = True )
         #db_exec( "CREATE TABLE meta_append AS SELECT * FROM meta", transaction = True )
         db_exec( "CREATE TABLE meta_append AS TABLE meta WITH NO DATA", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS unique_cov", transaction = True )
+        db_exec( "CREATE TABLE unique_cov_append AS SELECT * FROM unique_cov", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS unique_vcf", transaction = True )
+        db_exec( "CREATE TABLE unique_vcf_append AS SELECT * FROM unique_vcf", transaction = True )
 
     # filter vcf_all above threshold
     if args.filter_vcf:
@@ -174,10 +178,14 @@ if __name__ == '__main__':
 
     # rename tables
     if args.rename_tables:
+        db_exec( "DROP TABLE IF EXISTS uniq_cov", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS uniq_vcf", transaction = True )
         db_exec( "DROP TABLE IF EXISTS vcf_all CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS vcf CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS cov CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS meta CASCADE", transaction = True )
+        db_exec( "ALTER TABLE IF EXISTS unique_cov_append RENAME TO unique_cov", transaction = True )
+        db_exec( "ALTER TABLE IF EXISTS unique_vcf_append RENAME TO unique_vcf", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS vcf_all_append RENAME TO vcf_all", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS vcf_append RENAME TO vcf", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS cov_append RENAME TO cov", transaction = True )
