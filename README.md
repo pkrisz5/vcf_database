@@ -73,13 +73,24 @@ A cronjob takes care of inserting new data in the database. To start the cronjob
 kubectl apply -f cron.yaml
 ```
 
+#### Download vcf and coverage files
+
+In case you know the URL to coverage and vcf tarballs, you can download them to the previously prepared folder structure so cronjob can process them when it is due. Assume the URLs are something like `https://foo.bar:port/snapshot/foobar.coverage.tar.gz` and `https://foo.bar:port/snapshot/foobar.vcf.tar.gz`
+
+```bash
+kubectl exec -it postgres-shell -- wget https://foo.bar:port/snapshot/foobar.coverage.tar.gz -O /mnt/x_cov/new/foobar.coverage.tar.gz
+kubectl exec -it postgres-shell -- wget https://foo.bar:port/snapshot/foobar.vcf.tar.gz -O /mnt/x_vcf/new/foobar.vcf.tar.gz
+```
+
+_Note:_ right after a successful data extraction the tarball is moved in the `archive/` folder the same level in the directory tree as the folder `new/`. During data processing the content of the tarbals are available in the appropriate `tmp/` folder. 
+
 #### Insert data in database by hand
 
 TBA
 
 ### Start report server
 
-Reports are served by an R-shiny server from the `app/` folder. Should just a subset of available reports be available edit the mount points as necessary in `report.yaml` then start the service.
+Reports are served by an R-shiny server from the `app/` folder. Should just a subset of available reports be published edit the mount points as necessary in `report.yaml` then start the service.
 
 ```bash
 kubectl apply -f report.yaml
