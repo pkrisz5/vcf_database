@@ -33,6 +33,14 @@ kubectl apply -f pvc-postgres.yaml
 kubectl apply -f postgres.yaml
 ```
 
+### Storage place for raw data files
+
+Those files picked up by the database loader scripts are placed in a separate volume. Create it by issuing the following request.
+
+```bash
+kubectl apply -f pvc-raw.yaml
+```
+
 ### A helper pod
 
 Start a helper pod to clone codebase, initialize database schema and prepare the folder structure. 
