@@ -38,7 +38,7 @@ spec:
                 secretKeyRef:
                   key: db
                   name: pg-admin-ebi
-            image: veo.vo.elte.hu:5000/k8plex-ei-rstudio-basic
+            image: veo.vo.elte.hu:5000/k8plex:rshiny-python
             imagePullPolicy: IfNotPresent
             name: populate-data
             resources: {}

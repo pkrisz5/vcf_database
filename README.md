@@ -39,3 +39,13 @@ kubectl exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_meta_scr
 kubectl exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_cov_script.r
 kubectl exec -it postgres-rstudio -- Rscrip /x_scripts/repo/scripts/ebi_vcf_script.r
 ```
+
+### Image preparation
+
+It does not need to be run. Just a memory of how it was prepared.
+
+```bash
+docker build -t kooplex:rshiny-python .
+docker tag kooplex:rshiny-python veo.vo.elte.hu:5000/k8plex:rshiny-python
+docker push veo.vo.elte.hu:5000/k8plex:rshiny-python
+```

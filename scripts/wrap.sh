@@ -213,6 +213,17 @@ exec 2>&1
 python $SD/operation.py assert -s 4
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
+    echo "$(date) STAGE 4 filter vcf table" | tee >&9
+    python $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "filter_vcf", "value": ".1" }'
+    python $SD/init_db.py --filter_vcf .1
+    STATUS=$?
+    echo "$(date) finished filtering vcf table. Exit status: $STATUS" | tee >&9
+    python $SD/operation.py append -s 4 -c $STATUS -e '{ "command": "init_db.py", "arg": "filter_vcf", "value": ".1" }'
+fi
+
+python $SD/operation.py assert -s 4
+STATUS=$?
+if [ $STATUS -eq 0 ] ; then
     echo "$(date) STAGE 4 create materialized views" | tee >&9
     python $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
     python $SD/init_db.py --create_materialized_views -A
