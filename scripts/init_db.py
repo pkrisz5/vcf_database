@@ -10,7 +10,7 @@ host = os.getenv('DB_HOST')
 port = os.getenv('DB_PORT', 5432)
 db = os.getenv('DB')
 
-p = os.getenv('SCHEMA_PATH', '/x_scripts')
+p = os.getenv('SCHEMA_PATH', '../schema')
 
 tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
 mviews = [ 'lineage', 'unique_ena_run_summary' ]
@@ -133,7 +133,6 @@ if __name__ == '__main__':
         db_exec( "DROP TABLE IF EXISTS cov_append", transaction = True )
         db_exec( "CREATE TABLE cov_append AS SELECT * FROM cov", transaction = True )
         db_exec( "DROP TABLE IF EXISTS meta_append", transaction = True )
-        #db_exec( "CREATE TABLE meta_append AS SELECT * FROM meta", transaction = True )
         db_exec( "CREATE TABLE meta_append AS TABLE meta WITH NO DATA", transaction = True )
         db_exec( "DROP TABLE IF EXISTS unique_cov", transaction = True )
         db_exec( "CREATE TABLE unique_cov_append AS SELECT * FROM unique_cov", transaction = True )

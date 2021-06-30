@@ -2,16 +2,16 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: postgres-python
+  name: postgres-shell
   namespace: kooplex-veo
 spec:
-  hostname: postgres-python
+  hostname: postgres-shell
   containers:
-  - image: kooplex/k8plex-ei-jupyter-basic
+  - image: veo.vo.elte.hu:5000/k8plexr:shiny-python
     command:
       - sleep
       - infinity
-    name: postgres-python
+    name: postgres-shell
     env:
       - name: SCHEMA_PATH
         value: /mnt/repo/schema/
