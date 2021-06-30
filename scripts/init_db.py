@@ -168,11 +168,11 @@ if __name__ == '__main__':
     # create materialized views
     if args.create_materialized_views:
         for v in mviews:
-            statement = open(os.path.join(p, "mview-{}.sql".format(v))).read()
+            statement = open(os.path.join(p, "mview-{}.t.sql".format(v))).read()
             if args.operate_on_append:
-                statement = re.sub('(FROM cov)', '\1_append', statement )
-                statement = re.sub('(FROM vcf)', '\1_append', statement )
-                statement = re.sub('(FROM meta)', '\1_append', statement )
+                statement = re.sub('%%POSTFIX%%', '_append', statement )
+            else:
+                statement = re.sub('%%POSTFIX%%', '', statement )
             db_exec( statement, transaction = True )
 
     # rename tables

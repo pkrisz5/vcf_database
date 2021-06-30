@@ -251,7 +251,7 @@ STATUS=$?
 if [ $STATUS -eq 0 ] ; then
     echo "$(date) STAGE 5 rename tables" | tee >&9
     python $SD/operation.py append -s 5 -c -1 -e '{ "command": "init_db.py", "arg": "rename_tables" }'
-    python $SD/init_db.py --rename_tables -A
+    python $SD/init_db.py --rename_tables
     STATUS=$?
     echo "$(date) finished renaming tables. Exit status: $STATUS" | tee >&9
     python $SD/operation.py append -s 5 -c $STATUS -e '{ "command": "init_db.py", "arg": "rename_tables" }'
