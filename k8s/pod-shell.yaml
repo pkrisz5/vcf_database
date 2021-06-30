@@ -7,7 +7,7 @@ metadata:
 spec:
   hostname: postgres-shell
   containers:
-  - image: veo.vo.elte.hu:5000/k8plex:shiny-python
+  - image: veo.vo.elte.hu:5000/k8plex:rshiny-python
     command:
       - sleep
       - infinity
