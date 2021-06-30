@@ -79,7 +79,7 @@ TBA
 
 ### Start report server
 
-Reports are served by an R-shiny server from the `app/` folder. Should just a subset of available reports be available edit the mount points as necessary in `report.yaml` then start the service.
+Reports are served by an R-shiny server from the `app/` folder. Should just a subset of available reports be published edit the mount points as necessary in `report.yaml` then start the service.
 
 ```bash
 kubectl apply -f report.yaml
