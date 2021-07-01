@@ -132,7 +132,7 @@ if __name__ == '__main__':
             n = 0
             for r in resp:
                 jsr = json.loads(r['extra_info'])
-                if args.source in jsr['command']: 
+                if ('command' in jsr) and (args.source in jsr['command']):
                     n += jsr['n_files']
             print (n)
     
