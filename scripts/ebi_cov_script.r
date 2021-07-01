@@ -46,7 +46,7 @@ if (nrow(ids) != 0) {
       filter(bin == j)
     x <- as.character(x$ena_run)
 
-    unique_cov <- tibble(insertion_ts = character(), ena_run = character(), snapshot = character(), integrity = integer())
+    unique_cov <- tibble(insertion_ts = as.POSIXct(NA), ena_run = character(), snapshot = character(), integrity = integer())
     ts <- Sys.time() 
     r <- 0
 

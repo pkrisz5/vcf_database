@@ -67,7 +67,7 @@ if (nrow(ids) != 0) {
       filter(bin == j)
     f_list <- as.character(f_list$ena_run)
 
-    unique_vcf <- tibble(insertion_ts = character(), ena_run = character(), snapshot = character(), integrity = integer())
+    unique_vcf <- tibble(insertion_ts = as.POSIXct(NA), ena_run = character(), snapshot = character(), integrity = integer())
     ts <- Sys.time() 
     r <- 0
     for (f in f_list) {
