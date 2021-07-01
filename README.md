@@ -84,6 +84,14 @@ kubectl exec -it postgres-shell -- wget https://foo.bar:port/snapshot/foobar.vcf
 
 _Note:_ right after a successful data extraction the tarball is moved in the `archive/` folder the same level in the directory tree as the folder `new/`. During data processing the content of the tarbals are available in the appropriate `tmp/` folder. 
 
+#### Synchronize codebase
+
+In case one wants to manually propagate changes of github content in the installed environment simply pull code by
+
+```bash
+kubectl exec -it postgres-shell -- bash -c 'cd /mnt/repo ; git pull'
+```
+
 #### Insert data in database by hand
 
 TBA
