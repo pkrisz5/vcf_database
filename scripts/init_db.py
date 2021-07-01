@@ -134,9 +134,9 @@ if __name__ == '__main__':
         db_exec( "CREATE TABLE cov_append AS SELECT * FROM cov", transaction = True )
         db_exec( "DROP TABLE IF EXISTS meta_append", transaction = True )
         db_exec( "CREATE TABLE meta_append AS TABLE meta WITH NO DATA", transaction = True )
-        db_exec( "DROP TABLE IF EXISTS unique_cov", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS unique_cov_append", transaction = True )
         db_exec( "CREATE TABLE unique_cov_append AS SELECT * FROM unique_cov", transaction = True )
-        db_exec( "DROP TABLE IF EXISTS unique_vcf", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS unique_vcf_append", transaction = True )
         db_exec( "CREATE TABLE unique_vcf_append AS SELECT * FROM unique_vcf", transaction = True )
 
     # filter vcf_all above threshold
