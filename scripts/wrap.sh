@@ -106,11 +106,11 @@ if [ $STATUS -eq 0 ] ; then
     		continue
 	fi
     	echo "$(date) start processing folder $d" | tee >&9
-        python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "ebi_vcf_script.r", "DIR_TMP": '$d', "n_files": '$N' }'
+        python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "ebi_vcf_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
         DIR_TMP=$d/ Rscript /mnt/repo/scripts/ebi_vcf_script.r
         STATUS=$?
         echo "$(date) processed $d exit status: $STATUS" | tee >&9
-        python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_vcf_script.r", "DIR_TMP": '$d', "n_files": '$N' }'
+        python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_vcf_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
 	rmdir $d
     done
 fi
@@ -131,11 +131,11 @@ if [ $STATUS -eq 0 ] ; then
     		continue
 	fi
     	echo "$(date) start processing folder $d" | tee >&9
-        python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "ebi_cov_script.r", "DIR_TMP": '$d', "n_files": '$N' }'
+        python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "ebi_cov_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
         DIR_TMP=$d/ Rscript /mnt/repo/scripts/ebi_cov_script.r
         STATUS=$?
         echo "$(date) processed $d exit status: $STATUS" | tee >&9
-        python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_cov_script.r", "DIR_TMP": '$d', "n_files": '$N' }'
+        python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_cov_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
 	rmdir $d
     done
 fi

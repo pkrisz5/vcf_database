@@ -104,6 +104,7 @@ if __name__ == '__main__':
             db_exec("TRUNCATE TABLE operation", transaction = True, fetch = False)
     
         if command == 'append':
+            json.loads(args.extra)
             resp = db_exec("SELECT stage, exit_code FROM operation ORDER BY event_ts DESC LIMIT 1", transaction = False, fetch = True)
             print (json.dumps(resp[0]))
             db_exec("INSERT INTO operation (event_ts, last_stage, last_exit_code, stage, exit_code, extra_info) VALUES ('{0}', {1}, {2}, {3}, {4}, '{5}')".format(
