@@ -18,6 +18,8 @@ spec:
           - command:
             - /mnt/repo/scripts/wrap.sh
             env:
+            - name: SCHEMA_PATH
+              value: /mnt/repo/schema/
             - name: SECRET_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -57,5 +59,70 @@ spec:
             persistentVolumeClaim:
               claimName: pvc-raw
   schedule: 0 9 * * *
+  successfulJobsHistoryLimit: 3
+  suspend: false
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: populate-data-ecdc
+  namespace: kooplex-veo
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    metadata:
+      creationTimestamp: null
+    spec:
+      template:
+        metadata:
+          creationTimestamp: null
+        spec:
+          containers:
+          - command:
+            - Rscript
+            args:
+            - /mnt/repo/scripts/ecdc_covid_country_weekly_script.R
+            env:
+            - name: SECRET_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  key: admin
+                  name: pg-admin-ebi
+            - name: SECRET_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: adminpw
+                  name: pg-admin-ebi
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  key: dbhost
+                  name: pg-admin-ebi
+            - name: DB
+              valueFrom:
+                secretKeyRef:
+                  key: db
+                  name: pg-admin-ebi
+            image: veo.vo.elte.hu:5000/k8plex:rshiny-python
+            imagePullPolicy: IfNotPresent
+            name: populate-data-ecdc
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+            terminationMessagePolicy: File
+            volumeMounts:
+            - mountPath: /mnt/repo
+              name: pvc
+              subPath: repo
+          dnsPolicy: ClusterFirst
+          restartPolicy: OnFailure
+          schedulerName: default-scheduler
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - name: pvc
+            persistentVolumeClaim:
+              claimName: pvc-raw
+  schedule: 0 0 * * *
   successfulJobsHistoryLimit: 3
   suspend: false

@@ -44,7 +44,7 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--schema", type = str, help = "describe columns of the table")
     parser.add_argument("-S", "--top10", type = str, help = "select 10 records of the table")
     parser.add_argument("-l", "--locks", action = "store_true", help = "show running queries")
-    #parser.add_argument("-k", "--kill", type = int, help = "kill a pid")
+    parser.add_argument("-k", "--kill", type = int, help = "kill a pid")
     args = parser.parse_args()
 
     con = psycopg2.connect(
@@ -111,6 +111,12 @@ SELECT pid, now() - pg_stat_activity.query_start AS duration, query, state
 FROM pg_stat_activity
             """
             db_exec(con, statement, False, True)
+
+        if args.kill:
+            statement = """
+SELECT pg_terminate_backend({})
+            """.format(args.kill)
+            db_exec(con, statement, True, True)
     
     finally:
         con.close()

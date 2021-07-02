@@ -20,7 +20,7 @@ if [ $STATUS -eq 0 ] ; then
     echo "$(date) STAGE 0 checking for new tarbals in x_cov/new" | tee >&9
     $SD/stg_0.sh /mnt/x_cov
     STATUS=$?
-    N=$(find /mnt/x_cov/tmp -type f | wc -w)
+    N=$(find /mnt/x_cov/tmp -type f -name \*.coverage | wc -w)
     python3 $SD/operation.py append -s 0 -c $STATUS -e '{ "command": "stg_0.sh", "arg": "x_cov", "n_files_cov": '$N' }'
     echo "$(date) finished processing new tarbals in x_cov/new. $N files to process later. Exit status: $STATUS" | tee >&9
 fi
@@ -32,7 +32,7 @@ if [ $STATUS -eq 0 ] ; then
     echo "$(date) STAGE 0 checking for new tarbals in x_vcf/new" | tee >&9
     $SD/stg_0.sh /mnt/x_vcf
     STATUS=$?
-    N=$(find /mnt/x_vcf/tmp -type f | wc -w)
+    N=$(find /mnt/x_vcf/tmp -type f -name \*.vcf | wc -w)
     python3 $SD/operation.py append -s 0 -c $STATUS -e '{ "command": "stg_0.sh", "arg": "x_vcf", "n_files_vcf": '$N' }'
     echo "$(date) finished processing new tarbals in x_vcf/new. $N files to process later. Exit status: $STATUS" | tee >&9
 fi
@@ -40,12 +40,12 @@ fi
 python3 $SD/operation.py assert -s 0
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
-    N1=$(find /mnt/x_cov/tmp -type f | wc -w)
-    N2=$(find /mnt/x_vcf/tmp -type f | wc -w)
+    N1=$(find /mnt/x_cov/tmp -type f -name \*.coverage | wc -w)
+    N2=$(find /mnt/x_vcf/tmp -type f -name \*.vcf | wc -w)
     N=$(( $N1 + $N2 ))
     if [ $N -gt 0 ] ; then
-        python3 $SD/operation.py append -s 1 -c 0 -e '{ "command": "wrap.sh", "n_files_extracted": '$N' }'
-        echo "$(date) STAGE 0->1: Alltogether $N files extracted in both tmp folders" | tee >&9
+        python3 $SD/operation.py append -s 1 -c 0 -e '{ "command": "wrap.sh", "n_files_cov": '$N1', "n_files_vcf": '$N2' }'
+        echo "$(date) STAGE 0->1: $N1 coverage files and $N2 vcf files. Alltogether $N files extracted in both tmp folders" | tee >&9
     fi
 fi
 
@@ -99,19 +99,23 @@ if [ $STATUS -eq 0 ] ; then
     		echo "Not a folder $d, skipping"
     		continue
     	fi
-        N=$(find $d -type f | wc -w)
+        N=$(find $d -type f -name \*.vcf | wc -w)
 	if [ $N -eq 0 ] ; then
     		echo "Empty folder $d, removing and skipping"
-		rmdir $d
+		rm -rf $d
     		continue
 	fi
     	echo "$(date) start processing folder $d" | tee >&9
         python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "ebi_vcf_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
-        DIR_TMP=$d/ Rscript /mnt/repo/scripts/ebi_vcf_script.r
+	DIR_TMP=$d/ SNAPSHOT=$(basename $d) Rscript /mnt/repo/scripts/ebi_vcf_script.r
         STATUS=$?
         echo "$(date) processed $d exit status: $STATUS" | tee >&9
         python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_vcf_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
-	rmdir $d
+        N=$(find $d -type f -name \*.vcf | wc -w)
+	if [ $N -eq 0 ] ; then
+		rm -rf $d
+		echo "$(date) removed danglink folder $d" | tee >&9
+	fi
     done
 fi
 
@@ -124,19 +128,23 @@ if [ $STATUS -eq 0 ] ; then
     		echo "Not a folder $d, skipping"
     		continue
     	fi
-        N=$(find $d -type f | wc -w)
+        N=$(find $d -type f -name \*.coverage | wc -w)
 	if [ $N -eq 0 ] ; then
     		echo "Empty folder $d, removing and skipping"
-		rmdir $d
+		rm -rf $d
     		continue
 	fi
     	echo "$(date) start processing folder $d" | tee >&9
         python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "ebi_cov_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
-        DIR_TMP=$d/ Rscript /mnt/repo/scripts/ebi_cov_script.r
+	DIR_TMP=$d/ SNAPSHOT=$(basename $d) Rscript /mnt/repo/scripts/ebi_cov_script.r
         STATUS=$?
         echo "$(date) processed $d exit status: $STATUS" | tee >&9
         python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_cov_script.r", "DIR_TMP": "'$d'", "n_files": '$N' }'
-	rmdir $d
+        N=$(find $d -type f -name \*.coverage | wc -w)
+	if [ $N -eq 0 ] ; then
+		rm -rf $d
+		echo "$(date) removed danglink folder $d" | tee >&9
+	fi
     done
 fi
 
@@ -187,12 +195,38 @@ exec 2>&1
 python3 $SD/operation.py assert -s 3
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
+    echo "$(date) STAGE 3 filter vcf table" | tee >&9
+    python3 $SD/operation.py append -s 3 -c -1 -e '{ "command": "init_db.py", "arg": "filter_vcf", "value": ".1" }'
+    python3 $SD/init_db.py --filter_vcf .1
+    STATUS=$?
+    echo "$(date) finished filtering vcf table. Exit status: $STATUS" | tee >&9
+    python3 $SD/operation.py append -s 3 -c $STATUS -e '{ "command": "init_db.py", "arg": "filter_vcf", "value": ".1" }'
+fi
+
+python3 $SD/operation.py assert -s 3
+STATUS=$?
+if [ $STATUS -eq 0 ] ; then
     echo "$(date) STAGE 3 create indexes" | tee >&9
     python3 $SD/operation.py append -s 3 -c -1 -e '{ "command": "init_db.py", "arg": "create_indexes" }'
     python3 $SD/init_db.py --create_indexes -A
     STATUS=$?
     echo "$(date) finished creating indexes. Exit status: $STATUS" | tee >&9
     python3 $SD/operation.py append -s 3 -c $STATUS -e '{ "command": "init_db.py", "arg": "create_indexes" }'
+    if [ $STATUS -eq 0 ] ; then
+        python3 $SD/operation.py append -s 4 -c 0 -e '{ "command": "wrap.sh" }'
+        echo "$(date) STAGE 3->4: no issues" | tee >&9
+    fi
+fi
+
+python3 $SD/operation.py assert -s 3
+STATUS=$?
+if [ $STATUS -eq 0 ] ; then
+    echo "$(date) STAGE 3 create materialized views" | tee >&9
+    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
+    python3 $SD/init_db.py --create_materialized_views -A
+    STATUS=$?
+    echo "$(date) finished creating materialized views. Exit status: $STATUS" | tee >&9
+    python3 $SD/operation.py append -s 3 -c $STATUS -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
     if [ $STATUS -eq 0 ] ; then
         python3 $SD/operation.py append -s 4 -c 0 -e '{ "command": "wrap.sh" }'
         echo "$(date) STAGE 3->4: no issues" | tee >&9
@@ -212,23 +246,12 @@ exec 2>&1
 python3 $SD/operation.py assert -s 4
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 4 filter vcf table" | tee >&9
-    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "filter_vcf", "value": ".1" }'
-    python3 $SD/init_db.py --filter_vcf .1
+    echo "$(date) STAGE 4 rename tables" | tee >&9
+    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "rename_tables" }'
+    python3 $SD/init_db.py --rename_tables
     STATUS=$?
-    echo "$(date) finished filtering vcf table. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 4 -c $STATUS -e '{ "command": "init_db.py", "arg": "filter_vcf", "value": ".1" }'
-fi
-
-python3 $SD/operation.py assert -s 4
-STATUS=$?
-if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 4 create materialized views" | tee >&9
-    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
-    python3 $SD/init_db.py --create_materialized_views -A
-    STATUS=$?
-    echo "$(date) finished creating materialized views. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 4 -c $STATUS -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
+    echo "$(date) finished renaming tables. Exit status: $STATUS" | tee >&9
+    python3 $SD/operation.py append -s 4 -c $STATUS -e '{ "command": "init_db.py", "arg": "rename_tables" }'
     if [ $STATUS -eq 0 ] ; then
         python3 $SD/operation.py append -s 5 -c 0 -e '{ "command": "wrap.sh" }'
         echo "$(date) STAGE 4->5: no issues" | tee >&9
@@ -248,40 +271,15 @@ exec 2>&1
 python3 $SD/operation.py assert -s 5
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 5 rename tables" | tee >&9
-    python3 $SD/operation.py append -s 5 -c -1 -e '{ "command": "init_db.py", "arg": "rename_tables" }'
-    python3 $SD/init_db.py --rename_tables
-    STATUS=$?
-    echo "$(date) finished renaming tables. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 5 -c $STATUS -e '{ "command": "init_db.py", "arg": "rename_tables" }'
-    if [ $STATUS -eq 0 ] ; then
-        python3 $SD/operation.py append -s 6 -c 0 -e '{ "command": "wrap.sh" }'
-        echo "$(date) STAGE 5->6: no issues" | tee >&9
-    fi
-fi
-
-exec 1>&9
-exec 2>&8
-
-
-###########################################
-## stage 6
-###########################################
-exec 1>> /mnt/logs/stage_6.log
-exec 2>&1
-
-python3 $SD/operation.py assert -s 6
-STATUS=$?
-if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 6 grant read user access" | tee >&9
-    python3 $SD/operation.py append -s 6 -c -1 -e '{ "command": "init_db.py", "arg": "grant_access" }'
+    echo "$(date) STAGE 5 grant read user access" | tee >&9
+    python3 $SD/operation.py append -s 5 -c -1 -e '{ "command": "init_db.py", "arg": "grant_access" }'
     python3 $SD/init_db.py --grant_access
     STATUS=$?
     echo "$(date) finished granting access. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 6 -c $STATUS -e '{ "command": "init_db.py", "arg": "grant_access" }'
+    python3 $SD/operation.py append -s 5 -c $STATUS -e '{ "command": "init_db.py", "arg": "grant_access" }'
     if [ $STATUS -eq 0 ] ; then
         python3 $SD/operation.py append -s 0 -c 0 -e '{ "command": "wrap.sh" }'
-        echo "$(date) STAGE 6->0: no issues" | tee >&9
+        echo "$(date) STAGE 5->0: no issues" | tee >&9
     fi
 fi
 

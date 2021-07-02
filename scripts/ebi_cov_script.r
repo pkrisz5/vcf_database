@@ -29,6 +29,7 @@ print(paste(Sys.time(), "number of sample records aready in tabe cov before upda
 # Selects the new coverage files and uploads them in bins
 
 filepath <- c(Sys.getenv(c("DIR_TMP")))
+snapshot <- c(Sys.getenv(c("SNAPSHOT")))
 
 ids <- tibble(ena_run = str_remove(list.files(path = filepath, pattern = regex("\\.coverage$")), pattern = ".coverage"))
 ids <- ids %>%
@@ -55,7 +56,7 @@ if (nrow(ids) != 0) {
       r <- r+1
       unique_cov[r, 'insertion_ts'] <- ts
       unique_cov[r, 'ena_run'] <- i
-      unique_cov[r, 'snapshot'] <- filepath
+      unique_cov[r, 'snapshot'] <- snapshot
 
       if (file.size(paste(filepath, i, ".coverage", sep = "")) != 0) {
         temp <- read_csv(paste(filepath, i, ".coverage", sep = ""),

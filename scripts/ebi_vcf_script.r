@@ -31,6 +31,7 @@ print(paste(Sys.time(), "number of records in vcf_all table", nrow(n), sep = " "
 # Selects the new vcf files and uploads them in bins
 
 filepath <- c(Sys.getenv(c("DIR_TMP")))
+snapshot <- c(Sys.getenv(c("SNAPSHOT")))
 ids <- tibble(ena_run = str_remove_all(list.files(path = filepath, pattern = regex("[0-9].annot.vcf")), pattern = ".annot.vcf"))
 ids <- ids %>%
   dplyr::filter(!ena_run %in% n$ena_run) %>% # this removes ena_run ids those are already in the database
@@ -75,7 +76,7 @@ if (nrow(ids) != 0) {
       r <- r+1
       unique_vcf[r, 'insertion_ts'] <- ts
       unique_vcf[r, 'ena_run'] <- f
-      unique_vcf[r, 'snapshot'] <- filepath
+      unique_vcf[r, 'snapshot'] <- snapshot
 
       #print(paste(Sys.time(), "processing file", paste(filepath, f, ".annot.vcf", sep = ""), sep=" "))
       if (file.size(paste(filepath, f, ".annot.vcf", sep = ""))!=0) {
