@@ -51,6 +51,7 @@ kubectl apply -f pod-shell.yaml
 kubectl exec -it postgres-shell -- git clone https://github.com/pkrisz5/vcf_database.git /mnt/repo
 kubectl exec -it postgres-shell -- /mnt/repo/scripts/mkdir.sh
 kubectl exec -it postgres-shell -- python3 /mnt/repo/scripts/init_db.py --init_db
+kubectl exec -it postgres-shell -- python3 /mnt/repo/scripts/init_db.py --create_table all
 kubectl exec -it postgres-shell -- python3 /mnt/repo/scripts/init_db.py --create_user
 kubectl exec -it postgres-shell -- python3 /mnt/repo/scripts/operation.py init
 ```
