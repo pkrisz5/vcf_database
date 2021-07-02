@@ -80,8 +80,8 @@ if __name__ == '__main__':
                      help = "create a table")
     parser.add_argument("-p", "--create_tables_append", action = "store_true",
                      help = "create a copy table of vcf and cov to append new data")
-    #parser.add_argument("-D", "--drop_table", choices = tc,
-    #                 help = "drop a table")
+    parser.add_argument("-D", "--drop_table", choices = tables,
+                     help = "drop a table")
     parser.add_argument("-f", "--filter_vcf",
                     help = "filter vcf_all_append (recent consensus af>.1)")
     parser.add_argument("-i", "--create_indexes", action = "store_true",
@@ -125,6 +125,10 @@ if __name__ == '__main__':
         else:
             statement = open(os.path.join(p, "table-{}.sql".format(args.create_table))).read()
             db_exec( statement, transaction = True )
+
+    # drop tables
+    if args.drop_table:
+        db_exec( "DROP TABLE IF EXISTS {} CASCADE".format(args.drop_table), transaction = True )
 
     # copy production tables for appending new data
     if args.create_tables_append:
