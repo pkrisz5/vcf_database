@@ -81,7 +81,7 @@ print(paste(Sys.time(), "truncated table meta_append", sep=" "))
 
 dbWriteTable(con, "meta_append", clean_meta , append = TRUE, row.names = FALSE)
 
-n <- tbl(con, "meta") %>% 
+n <- tbl(con, "meta_append") %>% 
   count()%>%
   collect
 
