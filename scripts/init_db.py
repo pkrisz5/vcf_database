@@ -146,7 +146,7 @@ if __name__ == '__main__':
     # filter vcf_all above threshold
     if args.filter_vcf:
         db_exec( "DROP TABLE IF EXISTS vcf_append", transaction = True )
-        db_exec( "CREATE TABLE vcf_append AS SELECT * FROM vcf_all_append WHERE \"af\" >= {}".format(args.filter_vcf), transaction = False )
+        db_exec( "CREATE TABLE vcf_append AS SELECT * FROM vcf_all_append WHERE \"af\" >= {}".format(args.filter_vcf), transaction = True )
 
     # create indexes
     if args.create_indexes:
