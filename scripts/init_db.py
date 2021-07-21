@@ -181,8 +181,8 @@ if __name__ == '__main__':
 
     # rename tables
     if args.rename_tables:
-        db_exec( "DROP TABLE IF EXISTS uniq_cov", transaction = True )
-        db_exec( "DROP TABLE IF EXISTS uniq_vcf", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS unique_cov", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS unique_vcf", transaction = True )
         db_exec( "DROP TABLE IF EXISTS vcf_all CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS vcf CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS cov CASCADE", transaction = True )
