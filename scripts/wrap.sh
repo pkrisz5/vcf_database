@@ -218,21 +218,6 @@ if [ $STATUS -eq 0 ] ; then
     fi
 fi
 
-python3 $SD/operation.py assert -s 3
-STATUS=$?
-if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 3 create materialized views" | tee >&9
-    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
-    python3 $SD/init_db.py --create_materialized_views -A
-    STATUS=$?
-    echo "$(date) finished creating materialized views. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 3 -c $STATUS -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
-    if [ $STATUS -eq 0 ] ; then
-        python3 $SD/operation.py append -s 4 -c 0 -e '{ "command": "wrap.sh" }'
-        echo "$(date) STAGE 3->4: no issues" | tee >&9
-    fi
-fi
-
 exec 1>&9
 exec 2>&8
 
@@ -246,12 +231,12 @@ exec 2>&1
 python3 $SD/operation.py assert -s 4
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 4 rename tables" | tee >&9
-    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "rename_tables" }'
-    python3 $SD/init_db.py --rename_tables
+    echo "$(date) STAGE 4 create materialized views" | tee >&9
+    python3 $SD/operation.py append -s 4 -c -1 -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
+    python3 $SD/init_db.py --create_materialized_views -A
     STATUS=$?
-    echo "$(date) finished renaming tables. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 4 -c $STATUS -e '{ "command": "init_db.py", "arg": "rename_tables" }'
+    echo "$(date) finished creating materialized views. Exit status: $STATUS" | tee >&9
+    python3 $SD/operation.py append -s 4 -c $STATUS -e '{ "command": "init_db.py", "arg": "create_materialized_views" }'
     if [ $STATUS -eq 0 ] ; then
         python3 $SD/operation.py append -s 5 -c 0 -e '{ "command": "wrap.sh" }'
         echo "$(date) STAGE 4->5: no issues" | tee >&9
@@ -271,15 +256,40 @@ exec 2>&1
 python3 $SD/operation.py assert -s 5
 STATUS=$?
 if [ $STATUS -eq 0 ] ; then
-    echo "$(date) STAGE 5 grant read user access" | tee >&9
-    python3 $SD/operation.py append -s 5 -c -1 -e '{ "command": "init_db.py", "arg": "grant_access" }'
+    echo "$(date) STAGE 5 rename tables" | tee >&9
+    python3 $SD/operation.py append -s 5 -c -1 -e '{ "command": "init_db.py", "arg": "rename_tables" }'
+    python3 $SD/init_db.py --rename_tables
+    STATUS=$?
+    echo "$(date) finished renaming tables. Exit status: $STATUS" | tee >&9
+    python3 $SD/operation.py append -s 5 -c $STATUS -e '{ "command": "init_db.py", "arg": "rename_tables" }'
+    if [ $STATUS -eq 0 ] ; then
+        python3 $SD/operation.py append -s 6 -c 0 -e '{ "command": "wrap.sh" }'
+        echo "$(date) STAGE 5->6: no issues" | tee >&9
+    fi
+fi
+
+exec 1>&9
+exec 2>&8
+
+
+###########################################
+## stage 6
+###########################################
+exec 1>> /mnt/logs/stage_6.log
+exec 2>&1
+
+python3 $SD/operation.py assert -s 6
+STATUS=$?
+if [ $STATUS -eq 0 ] ; then
+    echo "$(date) STAGE 6 grant read user access" | tee >&9
+    python3 $SD/operation.py append -s 6 -c -1 -e '{ "command": "init_db.py", "arg": "grant_access" }'
     python3 $SD/init_db.py --grant_access
     STATUS=$?
     echo "$(date) finished granting access. Exit status: $STATUS" | tee >&9
-    python3 $SD/operation.py append -s 5 -c $STATUS -e '{ "command": "init_db.py", "arg": "grant_access" }'
+    python3 $SD/operation.py append -s 6 -c $STATUS -e '{ "command": "init_db.py", "arg": "grant_access" }'
     if [ $STATUS -eq 0 ] ; then
         python3 $SD/operation.py append -s 0 -c 0 -e '{ "command": "wrap.sh" }'
-        echo "$(date) STAGE 5->0: no issues" | tee >&9
+        echo "$(date) STAGE 6->0: no issues" | tee >&9
     fi
 fi
 
