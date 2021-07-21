@@ -80,9 +80,7 @@ spec:
         spec:
           containers:
           - command:
-            - Rscript
-            args:
-            - /mnt/repo/scripts/ecdc_covid_country_weekly_script.R
+            - /mnt/repo/scripts/wrap_ecdc.sh
             env:
             - name: SECRET_USERNAME
               valueFrom:
