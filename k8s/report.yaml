@@ -43,6 +43,10 @@ spec:
       name: pv
       readOnly: true
       subPath: repo/app/report-1
+    - mountPath: /srv/report/sandbox
+      name: pv
+      readOnly: true
+      subPath: repo/app/sandbox
   restartPolicy: Always
   volumes:
   - name: pv
