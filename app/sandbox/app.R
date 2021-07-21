@@ -10,7 +10,7 @@ library(pool)
 library(config)
 library(ISOweek)
 library(NGLVieweR)
-library(shinyWidgets)
+# library(shinyWidgets)
 #  devtools::install_github("gadenbuie/shinyThings")
 library(shinyThings)
 
