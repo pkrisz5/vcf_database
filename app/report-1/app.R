@@ -10,12 +10,12 @@ library(shinyBS)
 library(config)
 library(ISOweek)
 library(NGLVieweR)
-# library(shinyWidgets)
+library(shinyWidgets)
 #  devtools::install_github("gadenbuie/shinyThings")
 library(shinyThings)
 
 
-app_version <- "v_000.020"
+app_version <- "v_001.000"
 
 config <- config::get()
 
@@ -164,6 +164,18 @@ worldplot_data <- worldplot_data %>%
   mutate(sum_weekly_sample = cumsum(weekly_sample)) %>%
   ungroup()
 
+# Data for map
+
+country_population <- tbl(con, "ecdc_covid_country_weekly") %>%
+  select(country_name, population) %>%
+  distinct() %>%
+  rename(clean_country = "country_name") %>%
+  mutate(
+    clean_country = ifelse(clean_country == "United States", "USA", clean_country),
+    clean_country = ifelse(clean_country == "Russian Federation", "Russia", clean_country)
+  ) %>%
+  collect()
+
 
 ############################################################################################
 # User interface of the app
@@ -202,14 +214,15 @@ ui <- dashboardPage(
       id = "sidebar",
       menuItem("Samples from countries",
         icon = icon("map-marked-alt"), startExpanded = TRUE,
-        menuSubItem("Maps", tabName = "country_map"),
-        menuSubItem("Graphs", tabName = "country_graph")
+        menuSubItem("Graphs", tabName = "country_graph"),
+        menuSubItem("Maps", tabName = "country_map")
+
       ),
       # menuItem("Samples from countries (graphs)", tabName = "country_graph", icon = icon("chart-bar")),
       menuItem("Variants", tabName = "variants", icon = icon("chart-bar")),
       menuItem("Variants (VOC/VUI selection)", tabName = "lineage_graph_lineage", icon = icon("chart-bar")),
       menuItem("Variants (Country selection)", tabName = "lineage_graph_country", icon = icon("chart-bar")),
-      menuItem("Demo notebooks", tabName = "demo_notebook", icon = icon("table")),
+      #menuItem("Demo notebooks", tabName = "demo_notebook", icon = icon("table")),
       menuItem("Info", tabName = "menu_info", icon = icon("info"))
     )
   ),
@@ -484,16 +497,16 @@ ui <- dashboardPage(
 
 
 
-      tabItem(
-        tabName = "demo_notebook",
-        fluidRow(
-          "These are demo notebooks that show examples how to reach/query the database.", br(),
-          tags$li(tags$a(href = "https://veo.vo.elte.hu/report/vcfdatabasewithrdemo/vcf_database_demo_v04_20210504.nb.html", "How to reach the databse from R")),
-          tags$li(tags$a(href = "https://veo.vo.elte.hu/report/vcfdatabasewithpythondemo/vcf_database_demo_python_v03_210628%20(1).html", "How to reach the databse from Python")),
-          "These are usefull examples that can help to make your own notebook.", br(),
-          'If you need help, then do not hesitate to contact us: "krisztian.papp@phys-gs.elte.hu", we waiting for any comments/suggestions', br(),
-        ),
-      ),
+      # tabItem(
+      #   tabName = "demo_notebook",
+      #   fluidRow(
+      #     "These are demo notebooks that show examples how to reach/query the database.", br(),
+      #     tags$li(tags$a(href = "https://veo.vo.elte.hu/report/vcfdatabasewithrdemo/vcf_database_demo_v04_20210504.nb.html", "How to reach the databse from R")),
+      #     tags$li(tags$a(href = "https://veo.vo.elte.hu/report/vcfdatabasewithpythondemo/vcf_database_demo_python_v03_210628%20(1).html", "How to reach the databse from Python")),
+      #     "These are usefull examples that can help to make your own notebook.", br(),
+      #     'If you need help, then do not hesitate to contact us: "krisztian.papp@phys-gs.elte.hu", we waiting for any comments/suggestions', br(),
+      #   ),
+      # ),
 
       tabItem(
         tabName = "menu_info",
@@ -582,8 +595,10 @@ ui <- dashboardPage(
               width = 12,
               DT::dataTableOutput("lineage_head")
             )
-          )
-        ),
+          ),
+        
+          'You can send any comments/suggestions: Kriszián Papp (krisztian.papp@phys-gs.elte.hu)', br(),
+          ),
       )
     ),
 
@@ -659,13 +674,13 @@ server <- function(input, output) {
     map <- jsonlite::fromJSON(txt = "eugeo.json", simplifyVector = FALSE)
 
     if (input$relative_to_population_eu) {
-      y <- tbl(con, "ecdc_covid_country_weekly") %>%
-        select(country_name, population) %>%
-        distinct() %>%
-        rename(clean_country = "country_name") %>%
-        collect()
+      # dist_ecdc <- tbl(con, "ecdc_covid_country_weekly") %>%
+      #   select(country_name, population) %>%
+      #   distinct() %>%
+      #   rename(clean_country = "country_name") %>%
+      #   collect()
       x <- country_samples %>%
-        left_join(y) %>%
+        left_join(country_population) %>%
         mutate(
           clean_country = ifelse(clean_country == "USA", "United States of America", clean_country),
           n_sample = round(n_sample / population * 1000000, 3),
@@ -706,17 +721,17 @@ server <- function(input, output) {
 
   output$world_map <- renderHighchart({
     if (input$relative_to_population_world) {
-      y <- tbl(con, "ecdc_covid_country_weekly") %>%
-        select(country_name, population) %>%
-        distinct() %>%
-        rename(clean_country = "country_name") %>%
-        mutate(
-          clean_country = ifelse(clean_country == "United States", "USA", clean_country),
-          clean_country = ifelse(clean_country == "Russian Federation", "Russia", clean_country)
-        ) %>%
-        collect()
+      # y <- tbl(con, "ecdc_covid_country_weekly") %>%
+      #   select(country_name, population) %>%
+      #   distinct() %>%
+      #   rename(clean_country = "country_name") %>%
+      #   mutate(
+      #     clean_country = ifelse(clean_country == "United States", "USA", clean_country),
+      #     clean_country = ifelse(clean_country == "Russian Federation", "Russia", clean_country)
+      #   ) %>%
+      #   collect()
       x <- country_samples %>%
-        left_join(y) %>%
+        left_join(country_population) %>%
         mutate(
           clean_country = ifelse(clean_country == "USA", "United States of America", clean_country),
           n_sample = round(n_sample / population * 1000000, 3),
@@ -923,7 +938,7 @@ server <- function(input, output) {
     )
 
     
-    x <- tbl(con, "meta") %>%
+    ebi_weekly_samples <- tbl(con, "meta") %>%
       dplyr::mutate(clean_country = ifelse(clean_country == "USA", "United States", clean_country)) %>%
       filter(!is.na(clean_collection_date)) %>%
       filter(!is.na(clean_country)) %>%
@@ -938,7 +953,7 @@ server <- function(input, output) {
       group_by(Country, date_year, date_week) %>%
       dplyr::summarise(weekly_sample = n()) %>%
       collect()
-    x <- x %>%
+    x <- ebi_weekly_samples %>%
       mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
       mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
       dplyr::filter(Country %in% local(eu)) %>%
@@ -993,7 +1008,7 @@ server <- function(input, output) {
           hc_scrollbar(enabled = FALSE) %>%
           hc_plotOptions(scatter = list(lineWidth = 1))
       } else {
-        x <- tbl(con, "meta") %>%
+        ebi_ecdc_weekly <- tbl(con, "meta") %>%
           dplyr::filter(clean_host == "Homo sapiens") %>%
           dplyr::mutate(clean_country = ifelse(clean_country == "USA", "United States", clean_country)) %>%
           dplyr::filter(!is.na(clean_collection_date)) %>%
@@ -1013,7 +1028,7 @@ server <- function(input, output) {
           dplyr::select(country_name, iso_a3, date_year, date_week, weekly_sample, ecdc_covid_country_weekly_cases, pct) %>%
           collect()
         
-        x <- x %>%
+        x <- ebi_ecdc_weekly %>%
           mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
           mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
           dplyr::filter(country_name %in% local(eu))%>%
@@ -1096,7 +1111,7 @@ server <- function(input, output) {
           hc_scrollbar(enabled = FALSE) %>%
           hc_plotOptions(scatter = list(lineWidth = 1))
       } else {
-        x <- tbl(con, "meta") %>%
+        country_weekly_data <- tbl(con, "meta") %>%
           dplyr::filter(clean_host == "Homo sapiens") %>%
           dplyr::mutate(clean_country = ifelse(clean_country == "USA", "United States", clean_country)) %>%
           dplyr::filter(!is.na(clean_collection_date)) %>%
@@ -1117,7 +1132,7 @@ server <- function(input, output) {
           dplyr::select(country_name, iso_a3, date_year, date_week, weekly_sample, ecdc_covid_country_weekly_cases, pct) %>%
           collect()
         
-        x <- x %>%
+        x <- country_weekly_data %>%
           mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
           mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = "")))%>%
           dplyr::filter(pct>=0)
