@@ -218,6 +218,12 @@ ui <- dashboardPage(
   
   
   dashboardBody(
+    tags$head(tags$style(HTML('
+      .content-wrapper {
+        background-color: #ffffff;
+      }
+    '
+    ))),
     tabItems(
       tabItem(
         tabName = "country_map",
@@ -641,11 +647,11 @@ ui <- dashboardPage(
                               
 
            /* main section  */                    
-         .skin-blue .content{
+         .skin-blue .content .btn_sm{
                               background-color: #ffffff;
                               }
-                                    
-            
+                               
+
                               
                               
                               ")))
