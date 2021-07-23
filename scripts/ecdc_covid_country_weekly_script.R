@@ -8,7 +8,7 @@ data <- read_csv("https://opendata.ecdc.europa.eu/covid19/nationalcasedeath/csv"
 load("/mnt/repo/data/country_iso.Rdata") #TODO: use env var to point to extra data folder
 
 data <- data %>%
-     select(country_code, year_week, indicator, weekly_count) %>%
+     select(country_code, population, year_week, indicator, weekly_count) %>%
      drop_na(country_code)%>%
      pivot_wider(values_from = weekly_count, names_from = indicator)%>%
      separate(year_week, into = c("date_year", "date_week"), sep="-")%>%
