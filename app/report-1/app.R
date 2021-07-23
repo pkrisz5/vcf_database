@@ -472,7 +472,7 @@ ui <- dashboardPage(
           
           box(
             title = "Lineage specific mutations on open and closed state S protein structure",
-            footer = HTML('<p> Click on the 3D structures <a href="https://www.rcsb.org/structure/7A95"> (PDB: 7A95)</a>, and move your mouse to spin or use mouse wheel to zoom the protein for better view of the mutationsaaaa</p>'),
+            footer = HTML('<p> Click on the 3D structures <a href="https://www.rcsb.org/structure/7A95"> (PDB: 7A95)</a>, and move your mouse to spin or use mouse wheel to zoom the protein for better view of the mutations</p>'),
             status = "primary",
             height = "520", width = "12", solidHeader = FALSE,
             fluidRow(
