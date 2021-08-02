@@ -61,7 +61,8 @@ if (nrow(ids) != 0) {
                hrun = character(),
                indel = character(),
                lof = character(),
-               nmd = character())
+               nmd = character(),
+	       major = double())
 
 
     f_list <- ids %>%
@@ -91,8 +92,32 @@ if (nrow(ids) != 0) {
                                                              FILTER = col_character(),
                                                              INFO = col_character())) %>%
                     mutate(ID=f)
-
+            is_new_nanopore_workflow <- str_detect(x[1,8], pattern = "MAJOR")
             if (is_nanopore){
+		    if(is_new_nanopore_workflow){ ########***
+                    x <- x %>%
+                        dplyr::rename(chrom = `#CHROM`,
+                        pos = POS,
+                        ena_run = ID,
+                        ref = REF,
+                        alt = ALT,
+                        qual = QUAL,
+                        filter = FILTER,
+                        info = INFO)%>%
+                        separate(col="info", into=c("dp", "af", "dp4",  "ann", "major","indel", "lof", "nmd"), sep = ";", fill="right") %>%
+                        add_column(sb=NA, .after = "af")%>%
+                        add_column(hrun=NA, .before = "indel")%>%
+                        mutate( major = str_remove(major, pattern = "MAJOR=")) %>%
+                        relocate(major, .after = "nmd") 
+                    x <- x %>%
+                      mutate (tmp = ann)%>%
+                      mutate (ann = indel)%>%
+                      mutate (indel = ifelse(tmp=="INDEL=0", NA, tmp)) %>%
+                      select(-tmp)
+
+                    
+                        
+              }else{
                     x <- x %>%
                         dplyr::rename(chrom = `#CHROM`,
                         pos = POS,
@@ -104,7 +129,13 @@ if (nrow(ids) != 0) {
                         info = INFO)%>%
                         separate(col="info", into=c("dp", "af", "dp4", "ann", "indel", "lof", "nmd"), sep = ";", fill="right") %>%
                         add_column(sb=NA, .after = "af")%>%
-                        add_column(hrun=NA, .before = "indel")
+                        add_column(hrun=NA, .before = "indel") %>%
+                        add_column(major=NA, .after = "nmd")
+              }
+		    
+		    
+ 
+		    
 
               
             } else {
@@ -118,7 +149,8 @@ if (nrow(ids) != 0) {
                         qual = QUAL,
                         filter = FILTER,
                         info = INFO)%>%
-                        separate(col="info", into=c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill="right")
+                        separate(col="info", into=c("dp", "af", "sb", "dp4", "ann", "hrun", "indel", "lof", "nmd"), sep = ";", fill="right")  %>%
+                        add_column(major=NA, .after = "nmd")
             }
         vcf <- rbind(vcf,x)
           unique_vcf[r, 'integrity'] <- 0
@@ -176,6 +208,7 @@ if (nrow(ids) != 0) {
       vcf$count_ref_reverse_base <- as.integer(vcf$count_ref_reverse_base)
       vcf$hrun <- as.integer(vcf$hrun)
       vcf$distance <- as.integer(vcf$distance)
+      vcf$major <- as.integer(vcf$major)
       dbWriteTable(con, name = "vcf_all_append", value = vcf, append = TRUE, row.names = FALSE)
       dbWriteTable(con, "unique_vcf_append", unique_vcf, append = TRUE, row.names = FALSE)
       N <- N + r
