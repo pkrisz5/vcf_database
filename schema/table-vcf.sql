@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS vcf (
     indel      boolean,
     lof      text,
     nmd      text,
+    major      int,
     ann_num      int,
     annotation      text,
     annotation_impact text,
