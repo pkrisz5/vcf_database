@@ -82,6 +82,8 @@ if __name__ == '__main__':
                      help = "create a copy table of vcf and cov to append new data")
     parser.add_argument("-D", "--drop_table", choices = tables,
                      help = "drop a table")
+    parser.add_argument("-B", "--backup_table", choices = tables,
+                     help = "backup a table")
     parser.add_argument("-f", "--filter_vcf",
                     help = "filter vcf_all_append (recent consensus af>.1)")
     parser.add_argument("-i", "--create_indexes", action = "store_true",
@@ -142,6 +144,11 @@ if __name__ == '__main__':
         db_exec( "CREATE TABLE unique_cov_append AS SELECT * FROM unique_cov", transaction = True )
         db_exec( "DROP TABLE IF EXISTS unique_vcf_append", transaction = True )
         db_exec( "CREATE TABLE unique_vcf_append AS SELECT * FROM unique_vcf", transaction = True )
+
+    # backup a table
+    if args.backup_table:
+        db_exec( "DROP TABLE IF EXISTS {}_backup".format(args.backup_table), transaction = True )
+        db_exec( "CREATE TABLE {0}_backup AS SELECT * FROM {0}".format(args.backup_table), transaction = True )
 
     # filter vcf_all above threshold
     if args.filter_vcf:
