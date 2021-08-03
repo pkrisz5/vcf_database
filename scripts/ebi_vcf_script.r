@@ -92,6 +92,9 @@ if (nrow(ids) != 0) {
                                                              FILTER = col_character(),
                                                              INFO = col_character())) %>%
                     mutate(ID=f)
+	    if (nrow(x)==0 | ncol(x)<8){ 
+		    print(paste(Sys.time(), "excluded file", f, "with wrong dimension", sep = " "))
+		    next}
             is_new_nanopore_workflow <- str_detect(x[1,8], pattern = "MAJOR")
             if (is_nanopore){
 		    if(is_new_nanopore_workflow){ ########***
