@@ -13,7 +13,8 @@ db = os.getenv('DB')
 p = os.getenv('SCHEMA_PATH', '../schema')
 
 tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
-mviews = [ 'lineage', 'unique_ena_run_summary' ]
+mviews = [ 'unique_ena_run_summary', 'lineage0', 'lineage_base', 'lineage_other', 'lineage_not_analyzed', 'lineage' ]
+
 
 def create_db(db):
     #return "SELECT 'CREATE DATABASE \"{0}\"' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{0}')".format(db)
@@ -205,8 +206,8 @@ if __name__ == '__main__':
         db_exec( "ALTER INDEX IF EXISTS idx_cov_pos_coverage_ RENAME TO idx_cov_pos_coverage", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_pos_ RENAME TO idx_vcf_pos", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_ena_run_ RENAME TO idx_vcf_ena_run", transaction = True )
-        db_exec( "ALTER MATERIALIZED VIEW IF EXISTS lineage_append RENAME TO lineage", transaction = True )
-        db_exec( "ALTER MATERIALIZED VIEW IF EXISTS unique_ena_run_summary_append RENAME TO unique_ena_run_summary", transaction = True )
+        for mv in mviews:
+            db_exec( f"ALTER MATERIALIZED VIEW IF EXISTS {mv}_append RENAME TO {mv}", transaction = True )
 
 
     myConnection.close()
