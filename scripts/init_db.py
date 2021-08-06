@@ -71,6 +71,8 @@ if __name__ == '__main__':
     tc.append('all')
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("-X", "--drop_db", action = "store_true",
+                    help = "drop database")
     parser.add_argument("-I", "--init_db", action = "store_true",
                     help = "create database")
     parser.add_argument("-u", "--create_user", action = "store_true",
@@ -97,6 +99,15 @@ if __name__ == '__main__':
                     help = "operate on *_append")
     args = parser.parse_args()
 
+    # drop databases
+    if args.drop_db:
+        myConnection = con(None)
+        print ("{0} connected to db engine to create db {1}".format(datetime.datetime.now(), db))
+        #TODO: check postgres v >=13, DROP DATABASE xy WITH (FORCE)
+        db_exec( "DROP DATABASE IF EXISTS \"{0}\"".format(db), transaction = False )
+        myConnection.close()
+        print ("{} disconnected from db engine".format(datetime.datetime.now()))
+        sys.exit(0)
 
     # create databases
     if args.init_db:
