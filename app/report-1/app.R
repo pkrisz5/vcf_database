@@ -15,10 +15,9 @@ library(NGLVieweR)
 library(shinyThings)
 
 
-app_version <- "v_001.000"
+app_version <- "v_001.001"
 
 config <- config::get()
-
 con <- dbPool(
   drv = RPostgreSQL::PostgreSQL(),
   dbname = config$dbname,
@@ -27,6 +26,8 @@ con <- dbPool(
   user = config$user,
   password = config$password
 )
+
+
 
 onStop(function() {
   poolClose(con)
@@ -80,7 +81,7 @@ lineage2 <- lineage %>%
   mutate(pct = n / n_all * 100)
 
 lineage_def <- tbl(con, "lineage_def") %>%
-  select(variant_id:nextstrain, description) %>%
+  select(variant_id:type_variant, description) %>%
   collect() %>%
   distinct(variant_id, .keep_all = TRUE)
 
@@ -133,11 +134,14 @@ variants_weekly$cases_with_variant_id <- rowSums(variants_weekly[, c(-1, -2, -3)
 variant_master_table <- new_cases %>%
   left_join(variants_weekly) %>%
   mutate(
-    `Other variants` = weekly_sample - cases_with_variant_id,
+   # `Other variants` = weekly_sample - cases_with_variant_id,
     `Non-sequenced new cases` = ecdc_covid_country_weekly_cases - weekly_sample
   ) %>%
   dplyr::select(-weekly_sample, -ecdc_covid_country_weekly_cases, -cases_with_variant_id) %>%
   pivot_longer(cols = !any_of(c("country_name", "date", "date_year", "date_week")))
+
+variants <- unique(lineage$variant_id)
+variants <- variants[variants!="Not analysed yet " & variants!="Other variant" ]
 
 # This part creates a table for world data plot
 
@@ -455,7 +459,8 @@ ui <- dashboardPage(
         fluidRow(
           radioButtons("selected_lineage",
                        label = "Select VOC/VOI",
-                       choices = unique(lineage$variant_id),
+                       choices = variants,
+  
                        inline = TRUE, selected = unique(lineage$variant_id)[1]
           ),
           DT::dataTableOutput("table"),
@@ -766,7 +771,7 @@ server <- function(input, output) {
     selected_AA <- tbl(con, "lineage_def") %>%
       dplyr::filter(variant_id == !!input$selected_lineage) %>%
       dplyr::filter(
-        type == "SNP",
+       # type == "SNP",
         gene == "S"
       ) %>%
       dplyr::select("protein_codon_position") %>%
@@ -853,7 +858,7 @@ server <- function(input, output) {
     selected_AA <- tbl(con, "lineage_def") %>%
       dplyr::filter(variant_id == !!input$selected_lineage) %>%
       dplyr::filter(
-        type == "SNP",
+       # type == "SNP",
         gene == "S"
       ) %>%
       dplyr::select("protein_codon_position") %>%
