@@ -165,7 +165,16 @@ if __name__ == '__main__':
     # filter vcf_all above threshold
     if args.filter_vcf:
         db_exec( "DROP TABLE IF EXISTS vcf_append", transaction = True )
-        db_exec( "CREATE TABLE vcf_append AS SELECT * FROM vcf_all_append WHERE \"af\" >= {}".format(args.filter_vcf), transaction = True )
+        statement = """
+CREATE TABLE vcf_append AS 
+  SELECT *
+  FROM (
+    SELECT *, row_number() OVER (PARTITION BY ena_run, pos, ref, alt ORDER BY ena_run) AS row_number
+    FROM vcf_all_append WHERE "af" >= {}
+  ) AS rows
+  WHERE row_number = 1
+        """.format(args.filter_vcf)
+        db_exec( statement, transaction = True )
 
     # create indexes
     if args.create_indexes:
