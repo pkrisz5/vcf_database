@@ -123,7 +123,7 @@ if __name__ == '__main__':
     # create user
     if args.create_user:
         statement = create_user(os.getenv('READONLY_USERNAME', 'kooplex-reader'), os.getenv('READONLY_PASSWORD', 'reader-pw'))
-        db_exec( statement, transaction = False )
+        db_exec( statement, transaction = True )
 
     # grant read only right to user
     if args.grant_access:
