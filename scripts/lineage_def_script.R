@@ -15,16 +15,16 @@ con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       password = Sys.getenv(c("SECRET_PASSWORD"))
 )
 
+
 lineage_def <- lineage_def %>%
   dplyr::rename(variant_id = "WHO_label")%>%
   mutate(pos=str_remove(ref_pos_alt, pattern = ref))%>%
   mutate(pos=str_remove(pos, pattern = alt)) %>%
-  mutate(description="x")%>%
+  mutate(snpeff_original_mut=NA)%>%
   dplyr::rename(ref_protein="REF_protein",
          alt_protein="ALT_protein")%>%
-  filter(effect=="missense_variant",
-         gene =="S",
-         amino_acid_change!="D614G")
+  select(variant_id, pango, type_variant,	amino_acid_change, protein_codon_position, ref_protein,
+         alt_protein, gene,	effect,	snpeff_original_mut, ref_pos_alt,	ref, alt,	pos, description)
 lineage_def$pos <- as.integer(lineage_def$pos)
 
 
