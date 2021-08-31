@@ -175,6 +175,7 @@ CREATE TABLE vcf_append AS
   WHERE row_number = 1
         """.format(args.filter_vcf)
         db_exec( statement, transaction = True )
+        db_exec( "ALTER TABLE vcf_append DROP COLUMN row_number", transaction = True )
 
     # create indexes
     if args.create_indexes:
