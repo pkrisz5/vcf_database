@@ -159,16 +159,16 @@ if [ $STATUS -eq 0 ] ; then
     python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "ebi_meta_script.r" }'
 fi
 
-#python3 $SD/operation.py assert -s 2
-#STATUS=$?
-#if [ $STATUS -eq 0 ] ; then
-#    echo "$(date) STAGE 2 populate lineage_def" | tee >&9
-#    python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "lineage_def_script.R" }'
-#    Rscript /mnt/repo/scripts/lineage_def_script.R
-#    STATUS=$?
-#    echo "$(date) inserting lineage_def exit status: $STATUS" | tee >&9
-#    python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "lineage_def_script.R" }'
-#fi
+python3 $SD/operation.py assert -s 2
+STATUS=$?
+if [ $STATUS -eq 0 ] ; then
+    echo "$(date) STAGE 2 populate lineage_def" | tee >&9
+    python3 $SD/operation.py append -s 2 -c -1 -e '{ "command": "lineage_def_script.R" }'
+    Rscript /mnt/repo/scripts/lineage_def_script.R
+    STATUS=$?
+    echo "$(date) inserting lineage_def exit status: $STATUS" | tee >&9
+    python3 $SD/operation.py append -s 2 -c $STATUS -e '{ "command": "lineage_def_script.R" }'
+fi
 
 python3 $SD/operation.py assert -s 2
 STATUS=$?
