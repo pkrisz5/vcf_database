@@ -10,12 +10,14 @@ library(shinyBS)
 library(config)
 library(ISOweek)
 library(NGLVieweR)
+library(RColorBrewer)
 # library(shinyWidgets)
 #  devtools::install_github("gadenbuie/shinyThings")
 library(shinyThings)
 
+colorstw <- c(brewer.pal(n=8, name="Set2"),brewer.pal(n=12, name="Paired")[-c(3,7)], "#575858", "#c7f89c")[1:19]
 
-app_version <- "v_001.001"
+app_version <- "v_001.002"
 
 config <- config::get()
 con <- dbPool(
@@ -134,7 +136,7 @@ variants_weekly$cases_with_variant_id <- rowSums(variants_weekly[, c(-1, -2, -3)
 variant_master_table <- new_cases %>%
   left_join(variants_weekly) %>%
   mutate(
-   # `Other variants` = weekly_sample - cases_with_variant_id,
+    # `Other variants` = weekly_sample - cases_with_variant_id,
     `Non-sequenced new cases` = ecdc_covid_country_weekly_cases - weekly_sample
   ) %>%
   dplyr::select(-weekly_sample, -ecdc_covid_country_weekly_cases, -cases_with_variant_id) %>%
@@ -460,7 +462,7 @@ ui <- dashboardPage(
           radioButtons("selected_lineage",
                        label = "Select VOC/VOI",
                        choices = variants,
-  
+                       
                        inline = TRUE, selected = unique(lineage$variant_id)[1]
           ),
           DT::dataTableOutput("table"),
@@ -696,7 +698,8 @@ server <- function(input, output) {
         hc_title(text = "Number of raw SARS-CoV-2 sequence from EU") %>%
         hc_subtitle(text = "Move mouse above a country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples relative to 1 million derived from  {point.clean_country}")
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples relative to 1 million derived from  {point.clean_country}")%>%
+        hc_colors(colorstw)
     }
     else {
       x <- country_samples %>%
@@ -711,7 +714,8 @@ server <- function(input, output) {
         hc_title(text = "Number of raw SARS-CoV-2 sequence from EU") %>%
         hc_subtitle(text = "Move mouse above a country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.clean_country}")
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.clean_country}")%>%
+        hc_colors(colorstw)
     }
   })
   
@@ -745,7 +749,8 @@ server <- function(input, output) {
         hc_title(text = "Number of raw SARS-CoV-2 sequence from worldwide") %>%
         hc_subtitle(text = "Move mouse above the country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples relative to 1 million derived from {point.clean_country}")
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples relative to 1 million derived from {point.clean_country}")%>%
+        hc_colors(colorstw)
     }
     else {
       x <- country_samples %>%
@@ -760,7 +765,8 @@ server <- function(input, output) {
         hc_title(text = "Number of raw SARS-CoV-2 sequence from worldwide") %>%
         hc_subtitle(text = "Move mouse above the country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.clean_country}")
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.clean_country}")%>%
+        hc_colors(colorstw)
     }
   })
   
@@ -771,7 +777,7 @@ server <- function(input, output) {
     selected_AA <- tbl(con, "lineage_def") %>%
       dplyr::filter(variant_id == !!input$selected_lineage) %>%
       dplyr::filter(
-       # type == "SNP",
+        # type == "SNP",
         gene == "S"
       ) %>%
       dplyr::select("protein_codon_position") %>%
@@ -858,7 +864,7 @@ server <- function(input, output) {
     selected_AA <- tbl(con, "lineage_def") %>%
       dplyr::filter(variant_id == !!input$selected_lineage) %>%
       dplyr::filter(
-       # type == "SNP",
+        # type == "SNP",
         gene == "S"
       ) %>%
       dplyr::select("protein_codon_position") %>%
@@ -982,7 +988,8 @@ server <- function(input, output) {
         hc_tooltip(crosshairs = TRUE) %>%
         hc_navigator(enabled = FALSE) %>%
         hc_scrollbar(enabled = FALSE) %>%
-        hc_plotOptions(scatter = list(lineWidth = 1))
+        hc_plotOptions(scatter = list(lineWidth = 1))%>%
+        hc_colors(colorstw)
     } else {
       if (input$eu_graph_type=="Cumulative sample number"){
         highchart(type = "stock") %>%
@@ -1004,7 +1011,8 @@ server <- function(input, output) {
           hc_tooltip(crosshairs = TRUE) %>%
           hc_navigator(enabled = FALSE) %>%
           hc_scrollbar(enabled = FALSE) %>%
-          hc_plotOptions(scatter = list(lineWidth = 1))
+          hc_plotOptions(scatter = list(lineWidth = 1))%>%
+          hc_colors(colorstw)
       } else {
         x <- tbl(con, "meta") %>%
           dplyr::filter(clean_host == "Homo sapiens") %>%
@@ -1048,7 +1056,8 @@ server <- function(input, output) {
           ) %>%
           hc_tooltip(crosshairs = TRUE) %>%
           hc_navigator(enabled = FALSE) %>%
-          hc_scrollbar(enabled = FALSE)
+          hc_scrollbar(enabled = FALSE)%>%
+          hc_colors(colorstw)
         
       }
       
@@ -1085,7 +1094,8 @@ server <- function(input, output) {
         hc_tooltip(crosshairs = TRUE) %>%
         hc_navigator(enabled = FALSE) %>%
         hc_scrollbar(enabled = FALSE) %>%
-        hc_plotOptions(scatter = list(lineWidth = 1))
+        hc_plotOptions(scatter = list(lineWidth = 1))%>%
+        hc_colors(colorstw)
     } else {
       if (input$world_graph_type=="Cumulative sample number"){
         highchart(type = "stock") %>%
@@ -1107,7 +1117,8 @@ server <- function(input, output) {
           hc_tooltip(crosshairs = TRUE) %>%
           hc_navigator(enabled = FALSE) %>%
           hc_scrollbar(enabled = FALSE) %>%
-          hc_plotOptions(scatter = list(lineWidth = 1))
+          hc_plotOptions(scatter = list(lineWidth = 1))%>%
+          hc_colors(colorstw)
       } else {
         x <- tbl(con, "meta") %>%
           dplyr::filter(clean_host == "Homo sapiens") %>%
@@ -1151,7 +1162,8 @@ server <- function(input, output) {
           ) %>%
           hc_tooltip(crosshairs = TRUE) %>%
           hc_navigator(enabled = FALSE) %>%
-          hc_scrollbar(enabled = FALSE)
+          hc_scrollbar(enabled = FALSE)%>%
+          hc_colors(colorstw)
         
       }
       
@@ -1306,7 +1318,8 @@ server <- function(input, output) {
       hc_yAxis(title = list(text = "Percent of samples")) %>%
       hc_tooltip(crosshairs = TRUE) %>%
       hc_navigator(enabled = FALSE) %>%
-      hc_scrollbar(enabled = FALSE)
+      hc_scrollbar(enabled = FALSE) %>%
+      hc_colors(colorstw)
   })
   
   
@@ -1328,7 +1341,8 @@ server <- function(input, output) {
       hc_yAxis(title = list(text = "Number of samples")) %>%
       hc_tooltip(crosshairs = TRUE) %>%
       hc_navigator(enabled = FALSE) %>%
-      hc_scrollbar(enabled = FALSE)
+      hc_scrollbar(enabled = FALSE) %>%
+      hc_colors(colorstw)
   })
   
   
@@ -1362,7 +1376,8 @@ server <- function(input, output) {
       ) %>%
       hc_tooltip(split = TRUE) %>%
       hc_add_series(x, "column", hcaes(x = str_c(date_year, " ", date_week, ". week", sep = ""), y = value, group = name)) %>%
-      hc_xAxis(categories = unique(x$date))
+      hc_xAxis(categories = unique(x$date))%>%
+      hc_colors(colorstw)
   })
   
   
