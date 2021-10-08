@@ -8,17 +8,17 @@ lineage	n	Number of mutation in the given sample that is present from given vari
 lineage	required_mutation	Number of mutation in the given variant based on the 'variant_def' table
 meta	ena_run	 ENA Run ID
 meta	collection_date	Date of sample collection_date
-meta	clean_country	Country where sample was collected. This is a cleaned version of the "country" column that contains that that was directly submitted
+meta	clean_country	Country where sample was collected. This is a cleaned version of the 'country' column that contains that that was directly submitted
 meta	clean_host	Host. This is a cleaned column.
 meta	accession	Sample ID
 meta	sample_accession	Sample ID
 meta	experiment_accession	Experiment ID
 meta	study_accession	Study ID
 meta	description	Description
-meta	country	Name of the country from where sample derived. This is how data was submitted. There is a "clean_country" column that is a cleaned version of this column
+meta	country	Name of the country from where sample derived. This is how data was submitted. There is a 'clean_country' column that is a cleaned version of this column
 meta	first_created	Date when this record was created
 meta	first_public	Date when this record become public
-meta	host	Host. This is how data was submitted. There is a "clean_host" column that is a cleaned version of this column
+meta	host	Host. This is how data was submitted. There is a 'clean_host' column that is a cleaned version of this column
 meta	host_sex	Host sex
 meta	host_tax_id	Host tax ID
 meta	host_body_site	Host body site
@@ -43,7 +43,7 @@ meta	checklist	Checklist
 meta	clean_collection_date	Clean collection date
 meta	date_isoweek	Collection date only week
 meta	date_isoyear	Collection date only year
-unique_ena_run_summary	table_name	Name of major tables ("meta", "vcf", "cov")
+unique_ena_run_summary	table_name	Name of major tables ('meta', 'vcf', 'cov')
 unique_ena_run_summary	count	Number of unique ENA Run ID's in the given table
 vcf	ena_run	ENA Run ID
 vcf	chrom	Chromosome (in this case this is the same everywhere)
