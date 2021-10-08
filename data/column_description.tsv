@@ -5,7 +5,7 @@ cov	coverage	Coverage of sequencing at the given position
 lineage	ena_run	ENA Run ID
 lineage	variant_id	WHO variant ID
 lineage	n	Number of mutation in the given sample that is present from given variant
-lineage	required_mutation	Number of mutation in the given variant based on the "variant_def" table
+lineage	required_mutation	Number of mutation in the given variant based on the 'variant_def' table
 meta	ena_run	 ENA Run ID
 meta	collection_date	Date of sample collection_date
 meta	clean_country	Country where sample was collected. This is a cleaned version of the "country" column that contains that that was directly submitted
