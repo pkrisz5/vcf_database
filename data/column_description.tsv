@@ -1,0 +1,165 @@
+table_name	column_name	description
+cov	ena_run	ENA Run ID
+cov	pos	Position on the SARS-CoV-2 reference sequence
+cov	coverage	Coverage of sequencing at the given position
+lineage	ena_run	ENA Run ID
+lineage	variant_id	WHO variant ID
+lineage	n	Number of mutation in the given sample that is present from given variant
+lineage	required_mutation	Number of mutation in the given variant based on the "variant_def" table
+meta	ena_run	 ENA Run ID
+meta	collection_date	Date of sample collection_date
+meta	clean_country	Country where sample was collected. This is a cleaned version of the "country" column that contains that that was directly submitted
+meta	clean_host	Host. This is a cleaned column.
+meta	accession	Sample ID
+meta	sample_accession	Sample ID
+meta	experiment_accession	Experiment ID
+meta	study_accession	Study ID
+meta	description	Description
+meta	country	Name of the country from where sample derived. This is how data was submitted. There is a "clean_country" column that is a cleaned version of this column
+meta	first_created	Date when this record was created
+meta	first_public	Date when this record become public
+meta	host	Host. This is how data was submitted. There is a "clean_host" column that is a cleaned version of this column
+meta	host_sex	Host sex
+meta	host_tax_id	Host tax ID
+meta	host_body_site	Host body site
+meta	bio_material	Bio Material
+meta	culture_collection	Culture collection
+meta	instrument_model	Instrument model
+meta	instrument_platform	Instrument Platform
+meta	library_layout	Library Layout
+meta	library_name	Library Name
+meta	library_selection	Library Selection
+meta	library_source	Library Source
+meta	library_strategy	Library Strategy
+meta	sequencing_method	Sequencing Method
+meta	isolate	Isolate
+meta	strain	Strain
+meta	base_count	Base Count
+meta	collected_by	Collected by
+meta	broker_name	Broker name
+meta	center_name	 center name
+meta	sample_capture_status	Sample Capture Status
+meta	checklist	Checklist
+meta	clean_collection_date	Clean collection date
+meta	date_isoweek	Collection date only week
+meta	date_isoyear	Collection date only year
+unique_ena_run_summary	table_name	Name of major tables ("meta", "vcf", "cov")
+unique_ena_run_summary	count	Number of unique ENA Run ID's in the given table
+vcf	ena_run	ENA Run ID
+vcf	chrom	Chromosome (in this case this is the same everywhere)
+vcf	pos	Position on the SARS-CoV-2 reference sequence
+vcf	ref	Reference allel
+vcf	alt	Alternate allel
+vcf	qual	Quality
+vcf	filter	Filter
+vcf	dp	Raw Depth
+vcf	af	Allele Frequency
+vcf	sb	Phred-scaled strand bias at this position
+vcf	count_ref_forward_base	Counts for ref-forward bases
+vcf	count_ref_reverse_base	Counts for ref-reverse
+vcf	count_alt_forward_base	Counts for alt-forward
+vcf	count_alt_reverse_base	Counts for alt-reverse bases
+vcf	hrun	Homopolymer length to the right of report indel position
+vcf	indel	Indicates that the variant is an INDEL
+vcf	lof	Predicted loss of function effects for this variant
+vcf	nmd	NMD
+vcf	major	In case of Nanopore data this indicates if the mutation is real 
+vcf	ann_num	Number of annotation (this is 1 everywhere)
+vcf	annotation	Annotation
+vcf	annotation_impact	Annotation Impact
+vcf	gene_name	Gene Name
+vcf	gene_id	Gene ID
+vcf	feature_type	Feature Type
+vcf	transcript_biotype	Transcript BioType
+vcf	rank_	Rank
+vcf	hgvs_c	HGVS.c
+vcf	cdna_pos__cdna_length	cDNA.pos / cDNA.length
+vcf	cds_pos__cds_length	CDS.pos / CDS.length
+vcf	aa_pos__aa_length	AA.pos / AA.length
+vcf	distance	Distance
+vcf	errors_warnings_info	ERRORS / WARNINGS / INFO
+vcf_all	ena_run	ENA Run ID
+vcf_all	chrom	Chromosome (in this case this is the same everywhere)
+vcf_all	pos	Position on the SARS-CoV-2 reference sequence
+vcf_all	ref	Reference allel
+vcf_all	alt	Alternate allel
+vcf_all	qual	Quality
+vcf_all	filter	Filter
+vcf_all	dp	Raw Depth
+vcf_all	af	Allele Frequency
+vcf_all	sb	Phred-scaled strand bias at this position
+vcf_all	count_ref_forward_base	Counts for ref-forward bases
+vcf_all	count_ref_reverse_base	Counts for ref-reverse
+vcf_all	count_alt_forward_base	Counts for alt-forward
+vcf_all	count_alt_reverse_base	Counts for alt-reverse bases
+vcf_all	hrun	Homopolymer length to the right of report indel position
+vcf_all	indel	Indicates that the variant is an INDEL
+vcf_all	lof	Predicted loss of function effects for this variant
+vcf_all	nmd	NMD
+vcf_all	major	In case of Nanopore data this indicates if the mutation is real 
+vcf_all	ann_num	Number of annotation (this is 1 everywhere)
+vcf_all	annotation	Annotation
+vcf_all	annotation_impact	Annotation Impact
+vcf_all	gene_name	Gene Name
+vcf_all	gene_id	Gene ID
+vcf_all	feature_type	Feature Type
+vcf_all	transcript_biotype	Transcript BioType
+vcf_all	rank_	Rank
+vcf_all	hgvs_c	HGVS.c
+vcf_all	cdna_pos__cdna_length	cDNA.pos / cDNA.length
+vcf_all	cds_pos__cds_length	CDS.pos / CDS.length
+vcf_all	aa_pos__aa_length	AA.pos / AA.length
+vcf_all	distance	Distance
+vcf_all	errors_warnings_info	ERRORS / WARNINGS / INFO
+lineage_def	variant_id	WHO variant ID
+lineage_def	pango	 Pango lineage ID
+lineage_def	type_varinant	 Type of variant (VOC, VOI)
+lineage_def	amino_acid_change	 Reference amino acid + Position + Alternate amino acid
+lineage_def	protein_codon_position	 Protein codon position
+lineage_def	ref_protein	 Reference amino acid 
+lineage_def	alt_protein	 Alternate amino acid
+lineage_def	gene	 Gene
+lineage_def	effect	 Effect (eg. Missense variant)
+lineage_def	snpeff_original_mut	 -
+lineage_def	ref_pos_alt	Reference allel + Position + Alternate allel
+lineage_def	ref	Reference allel
+lineage_def	alt	Alternate allel
+lineage_def	pos	Position on the SARS-CoV-2 reference sequence
+lineage_def	description	Description of the variant
+unique_cov	insertion_ts	Date and time when the sample was inserted into the database
+unique_cov	ena_run	ENA Run ID
+unique_cov	snapshot	ID of biweekly snapshot
+unique_cov	integrity	Integrity
+unique_vcf	insertion_ts	Date and time when the sample was inserted into the database
+unique_vcf	ena_run	ENA Run ID
+unique_vcf	snapshot	ID of biweekly snapshot
+unique_vcf	integrity	Integrity
+primer_artic_v3	chrom	Reference chromosom
+primer_artic_v3	start	Starting position of the primer (counting starts from 1)
+primer_artic_v3	end	End position of the primer
+primer_artic_v3	name	Name of primer
+primer_artic_v3	primerpool	Primer pool (1/2)
+primer_artic_v3	strand	Strand(+/-)
+primer_artic_v3	sequence	Sequence where the primer binds
+primer_artic_v4	chrom	Reference chromosom
+primer_artic_v4	start	Starting position of the primer (counting starts from 1)
+primer_artic_v4	end	End position of the primer
+primer_artic_v4	name	Name of primer
+primer_artic_v4	primerpool	Primer pool (1/2)
+primer_artic_v4	strand	Strand(+/-)
+primer_artic_v4	sequence	Sequence where the primer binds
+pcr_primers	target_gene	Target gene
+pcr_primers	origin	Developer
+pcr_primers	country	Country
+pcr_primers	type	Type (F/R)
+pcr_primers	primer_name	Name of the primer (simple form)
+pcr_primers	original_primer_name	Original name of the primer
+pcr_primers	sequence	Target sequence of the primer
+pcr_primers	position_start	Starting position where the primer binds
+pcr_primers	position_end	End position where the primer binds
+pcr_primers	primer_size	Size of the primer (bp)
+pcr_primers	reference_genome	Reference genome
+pcr_primers	update_time	Time of update
+pcr_primers	doi	DOI of the publication where the primer was used
+pcr_primers	publication	The publication where the primer was used
+pcr_primers	other_reference	Other references

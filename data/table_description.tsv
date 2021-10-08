@@ -1,0 +1,14 @@
+type	table_name	title	description
+tables	vcf	 Mutations in the SARS-CoV-2 samples in VCF format (filtered)	 This is the filtered version of "vcf_all" table. Filter: AF>0.1
+tables	vcf_all	Mutations of the SARS-CoV-2 samples in VCF format (unfiltered)	 The submitted raw FASTQ files were analized by EBI using the following workflow: https://github.com/enasequence/covid-sequence-analysis-workflow/blob/master/workflow.nf. The unfiltered annotated VCF files were uploaded using the following script: https://github.com/pkrisz5/vcf_database/blob/main/scripts/ebi_vcf_script.r. 
+tables	cov	Coverage of sequencing	The submitted raw FASTQ files were analized by EBI using the following workflow: https://github.com/enasequence/covid-sequence-analysis-workflow/blob/master/workflow.nf. Only those position with coverage was inluded this table where coverage is lower than 100.
+tables	lineage_def	Defining mutations of WHO variants	Contains mutations of S protein of variants that help to assign samples into variants (it is very possible that there are more mutations in a given mutation that is in this list).
+tables	meta	Metadata of the samples	This table contains the cleaned metadata for each samples those were submitted to COVID-19 Data Portal. This table contains information even those samples that were only submitted but yet not analized by EBI workflow. So this table contains more samples than tables with mutation data. The script that creates this cleaned table : https://github.com/pkrisz5/vcf_database/blob/main/scripts/ebi_meta_script.r
+views	unique_ena_run_summary	Number of samples in the main tables	Number of unique samples in "meta", "vcf" and "cov" tables
+views	lineage	WHO variant classification of samples	 WHO variant classification of each samples.
+tables	unique_cov	Unique ENA run ID's for coverage data	 List of unique ENA run ID's for coverage data. This contains which biweekly snapshot contains the data
+tables	unique_vcf	Unique ENA run ID's for mutation data	 List of unique ENA run ID's for mutation data. This contains which biweekly snapshot contains the data.
+tables	primer_artic_v3	ARTIC V3 primer set	This is the ARTIC V3 primer set that is used for NGS. https://github.com/joshquick/artic-ncov2019/tree/master/primer_schemes/nCoV-2019/V3
+tables	primer_artic_v4	ARTIC V4 primer set	This is the ARTIC V4 primer set that is used for NGS. https://github.com/joshquick/artic-ncov2019/tree/master/primer_schemes/nCoV-2019/V4
+tables	pcr_primers	PCR primers	List of commercially available PRC primers
+
