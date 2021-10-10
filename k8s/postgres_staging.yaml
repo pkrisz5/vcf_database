@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-kooplex-staging
+  namespace: coveo-db-staging
+spec:
+  ports:
+    - name: port-staging
+      protocol: TCP
+      port: 5431
+      targetPort: 5432
+  selector:
+    app: app-staging
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-kooplex-staging
+  namespace: coveo-db-staging
+spec:
+  serviceName: "postgres"
+  podManagementPolicy: "Parallel"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-staging
+  template:
+    metadata:
+      labels:
+        app: app-staging
+    spec:
+      containers:
+      - name: postgres-staging
+        image: postgres:11.12
+        ports:
+          - containerPort: 5431
+            name: port-staging
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pg-admin-ebi
+              key: adminpw
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: pg-admin-ebi
+              key: admin
+        - name: PGDATA
+          value: /var/lib/postgresql/data_staging
+        volumeMounts:
+        - name: nfs
+          mountPath: /volume
+      volumes:
+        - name: nfs
+          persistentVolumeClaim:
+            claimName: nfs

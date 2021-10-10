@@ -1,0 +1,60 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: migration
+spec:
+  schedule: "*/15 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          name: migration
+        spec:
+          initContainers:
+          - name: job-staging
+            image: postgres:11.12
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-ebi
+                  key: adminpw
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-ebi
+                  key: admin
+            volumeMounts:
+              - name: nfs
+                mountPath: /volume
+            command: ["/bin/sh"]
+            args: [ "-c", "pg_dump -Fc -U ${POSTGRES_USER} -h postgres-kooplex-staging -p 5431 --verbose
+                    --file=/volume/pg_staging_backup.dump postgres" ]
+          - name: job-prod
+            image: postgres:11.12
+            env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-ebi
+                  key: adminpw
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-admin-ebi
+                  key: admin
+            volumeMounts:
+              - name: nfs
+                mountPath: /volume
+            command: ["/bin/sh"]
+            args: [ "-c", "pg_restore -U ${POSTGRES_USER} -h postgres-kooplex-prod -p 5433 -d postgres --clean --if-exists
+                    --single-transaction --verbose /volume/pg_staging_backup.dump" ]
+          containers:
+          - name: job-migration
+            image: alpine:3.14
+            command: ['sh', '-c', 'echo "job-1 and job-2 completed"']
+          restartPolicy: Never
+          volumes:
+            - name: nfs
+              persistentVolumeClaim:
+                claimName: nfs
