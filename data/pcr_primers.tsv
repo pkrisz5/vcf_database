@@ -1,4 +1,4 @@
-target_gene	origin	country	type	primer_name	original_primer_name	sequence	position_start	position_end	primer_size_bp	reference_genome	update_time	doi	publication	other_reference
+target_gene	origin	country	type	primer_name	original_primer_name	target_sequence	target_sequence_start	target_sequence_end	primer_size_bp	reference_genome	update_time	doi	publication	other_reference
 N	CDC-US	USA	F	Lu-N1	2019-nCoV_N1-F	GACCCCAAAATCAGCGAAAT	28287	28306	20	NC_045512.2	2020.06.06	 10.3201/eid2608.201246	Lu et al. 2020	https://bit.ly/2ZBuyk5
 N	CDC-US	USA	R	Lu-N1	2019-nCoV_N1-R	TCTGGTTACTGCCAGTTGAATCTG	28335	28358	24	NC_045512.2	2020.06.06	 10.3201/eid2608.201246	Lu et al. 2020	https://bit.ly/2ZBuyk5
 N	CDC-US	USA	F	Lu-N2	2019-nCoV_N2-F	TTACAAACATTGGCCGCAAA	29164	29183	20	NC_045512.2	2020.06.06	 10.3201/eid2608.201246	Lu et al. 2020	https://bit.ly/2ZBuyk5
