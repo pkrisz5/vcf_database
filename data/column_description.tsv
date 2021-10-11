@@ -149,17 +149,17 @@ primer_artic_v4	primerpool	Primer pool (1/2)
 primer_artic_v4	strand	Strand(+/-)
 primer_artic_v4	sequence	Sequence where the primer binds
 pcr_primers	target_gene	Target gene
-pcr_primers	origin	Developer
+pcr_primers	origin	Developer (eg. University)
 pcr_primers	country	Country
-pcr_primers	type	Type (F/R)
+pcr_primers	type	Type (F/R/probe)
 pcr_primers	primer_name	Name of the primer (simple form)
 pcr_primers	original_primer_name	Original name of the primer
-pcr_primers	sequence	Target sequence of the primer
-pcr_primers	position_start	Starting position where the primer binds
-pcr_primers	position_end	End position where the primer binds
-pcr_primers	primer_size	Size of the primer (bp)
+pcr_primers	target_sequence	Target sequence of the primer
+pcr_primers	target_sequence_start_pos	Starting position of the target sequence 
+pcr_primers	target_sequence_end_pos	End position of the target sequence
+pcr_primers	primer_size_bp	Size of the primer (bp)
 pcr_primers	reference_genome	Reference genome
-pcr_primers	update_time	Time of update
-pcr_primers	doi	DOI of the publication where the primer was used
-pcr_primers	publication	The publication where the primer was used
+pcr_primers	update_time	Date of publication
+pcr_primers	doi	DOI of the publication 
+pcr_primers	publication	Reference
 pcr_primers	other_reference	Other references
