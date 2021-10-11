@@ -22,7 +22,7 @@ if (nrow(d1) < 1) {
 
 double_id <- d1%>%
   group_by(run_accession) %>%
-  summarise(n=n()) %>%
+  dplyr::summarise(n=n()) %>%
   filter(n>1)
 
 d <- d1 %>%
