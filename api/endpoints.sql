@@ -49,7 +49,20 @@ FROM "lineage_def"
 
 
 -- "new_cases"
-
+SELECT "LHS"."country_name" AS "country_name", "LHS"."date_year" AS "date_year", "LHS"."date_week" AS "date_week", "LHS"."weekly_sample" AS "weekly_sample", "RHS"."iso_a3" AS "iso_a3", "RHS"."iso_a2" AS "iso_a2", "RHS"."country_name_local" AS "country_name_local", "RHS"."population" AS "population", "RHS"."ecdc_covid_country_weekly_cases" AS "ecdc_covid_country_weekly_cases", "RHS"."ecdc_covid_country_weekly_deaths" AS "ecdc_covid_country_weekly_deaths"
+FROM (SELECT "country_name", "date_year", "date_week", COUNT(*) AS "weekly_sample"
+FROM (SELECT "ena_run", "clean_country" AS "country_name", "clean_collection_date", "date_isoyear" AS "date_year", "date_isoweek" AS "date_week"
+FROM (SELECT *
+FROM (SELECT *
+FROM (SELECT *
+FROM (SELECT "ena_run", "collection_date", CASE WHEN ("clean_country" = 'USA') THEN ('United States') WHEN NOT("clean_country" = 'USA') THEN ("clean_country") END AS "clean_country", "clean_host", "accession", "sample_accession", "experiment_accession", "study_accession", "description", "country", "first_created", "first_public", "host", "host_sex", "host_tax_id", "host_body_site", "bio_material", "culture_collection", "instrument_model", "instrument_platform", "library_layout", "library_name", "library_selection", "library_source", "library_strategy", "sequencing_method", "isolate", "strain", "base_count", "collected_by", "broker_name", "center_name", "sample_capture_status", "fastq_ftp", "collection_date_submitted", "checklist", "clean_collection_date", "date_isoweek", "date_isoyear"
+FROM "meta") "dbplyr_153"
+WHERE (NOT((("clean_collection_date") IS NULL)))) "dbplyr_154"
+WHERE ("clean_host" = 'Homo sapiens')) "dbplyr_155"
+WHERE ("clean_collection_date" > CAST('2020-03-15' AS DATE))) "dbplyr_156") "dbplyr_157"
+GROUP BY "country_name", "date_year", "date_week") "LHS"
+LEFT JOIN "ecdc_covid_country_weekly" AS "RHS"
+ON ("LHS"."country_name" = "RHS"."country_name" AND "LHS"."date_year" = "RHS"."date_year" AND "LHS"."date_week" = "RHS"."date_week")
 -------------------------------------------------------------
 
 -- variants_weekly
@@ -69,6 +82,25 @@ ON ("LHS"."ena_run" = "RHS"."ena_run")
 ) "dbplyr_379"
 GROUP BY "country_name", "date_year", "date_week", "variant_id"
 -------------------------------------------------------------
+
+-- "worldplot_data"
+SELECT "Country", "date_year", "date_week", COUNT(*) AS "weekly_sample"
+FROM (SELECT "ena_run", "clean_country" AS "Country", "clean_collection_date", "date_isoyear" AS "date_year", "date_isoweek" AS "date_week"
+FROM (SELECT *
+FROM (SELECT *
+FROM (SELECT *
+FROM (SELECT *
+FROM (SELECT *
+FROM (SELECT "ena_run", "collection_date", CASE WHEN ("clean_country" = 'USA') THEN ('United States') WHEN NOT("clean_country" = 'USA') THEN ("clean_country") END AS "clean_country", "clean_host", "accession", "sample_accession", "experiment_accession", "study_accession", "description", "country", "first_created", "first_public", "host", "host_sex", "host_tax_id", "host_body_site", "bio_material", "culture_collection", "instrument_model", "instrument_platform", "library_layout", "library_name", "library_selection", "library_source", "library_strategy", "sequencing_method", "isolate", "strain", "base_count", "collected_by", "broker_name", "center_name", "sample_capture_status", "fastq_ftp", "collection_date_submitted", "checklist", "clean_collection_date", "date_isoweek", "date_isoyear"
+FROM "meta") "dbplyr_158"
+WHERE (NOT((("clean_collection_date") IS NULL)))) "dbplyr_159"
+WHERE (NOT((("clean_country") IS NULL)))) "dbplyr_160"
+WHERE ("clean_host" = 'Homo sapiens')) "dbplyr_161"
+WHERE ("clean_collection_date" > CAST('2020-03-15' AS DATE))) "dbplyr_162"
+WHERE ("clean_collection_date" < CURRENT_DATE)) "dbplyr_163") "dbplyr_164"
+GROUP BY "Country", "date_year", "date_week"
+-------------------------------------------------------------
+
 
 -- "coutry_population"
 -------------------------------------------------------------
