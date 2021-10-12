@@ -12,7 +12,8 @@ db = os.getenv('DB')
 
 p = os.getenv('SCHEMA_PATH', '../schema')
 
-tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
+#tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
+tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
 mviews = [ 'unique_ena_run_summary', 'lineage0', 'lineage_base', 'lineage_other', 'lineage_not_analyzed', 'lineage' ]
 
 

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS lineage_def (
+CREATE TABLE IF NOT EXISTS lineage_def_append (
 	variant_id             text,
 	pango                  text,
 	type_variant           text,

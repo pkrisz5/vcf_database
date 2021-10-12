@@ -28,10 +28,16 @@ lineage_def <- lineage_def %>%
 lineage_def$pos <- as.integer(lineage_def$pos)
 
 
-dbSendQuery(con, "TRUNCATE TABLE lineage_def")
-print(paste(Sys.time(), "truncated table lineage_def", sep=" ")) 
 
-dbWriteTable(con, "lineage_def", lineage_def , row.names = FALSE, overwrite = TRUE)
+#dbSendQuery(con, "TRUNCATE TABLE lineage_def_append")
+#print(paste(Sys.time(), "truncated table lineage_def_append", sep=" ")) 
+
+schema <- '../schema/table-lineage_def.sql'
+sql <- readChar(schema, file.info(schema)$size)
+dbSendQuery(con, sql)
+print(paste(Sys.time(), "created table lineage_def_append", sep=" ")) 
+
+dbWriteTable(con, "lineage_def_append", lineage_def , row.names = FALSE, overwrite = TRUE)
 
 dbDisconnect(con)
 
