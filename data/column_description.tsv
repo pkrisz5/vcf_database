@@ -73,7 +73,7 @@ vcf	feature_type	Feature Type
 vcf	transcript_biotype	Transcript BioType
 vcf	rank_	Rank
 vcf	hgvs_c	HGVS.c
-vcf hgvs_p  HGVS.p
+vcf	hgvs_p	HGVS.p
 vcf	cdna_pos__cdna_length	cDNA.pos / cDNA.length
 vcf	cds_pos__cds_length	CDS.pos / CDS.length
 vcf	aa_pos__aa_length	AA.pos / AA.length
