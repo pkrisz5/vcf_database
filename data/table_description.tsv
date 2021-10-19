@@ -11,4 +11,4 @@ tables	unique_vcf	Unique ENA run ID's for mutation data	 List of unique ENA run 
 tables	primer_artic_v3	ARTIC V3 primer set	This is the ARTIC V3 primer set that is used for NGS. https://github.com/joshquick/artic-ncov2019/tree/master/primer_schemes/nCoV-2019/V3
 tables	primer_artic_v4	ARTIC V4 primer set	This is the ARTIC V4 primer set that is used for NGS. https://github.com/joshquick/artic-ncov2019/tree/master/primer_schemes/nCoV-2019/V4
 tables	pcr_primers	PCR primers	List of commercially available PRC primers
-
+functions	convert_single_aa	Convert single letter amino acid symbols to three letter symbol	The annotation of mutations at protein level in the "hgvs_p" column of "vcf" table is like this eg. 'p.Ala63Thr'. This function enables the use of single letter amino acid symbols as it converts eg, 'A63T'--> 'p.Ala63Thr'. Example of usage: \n SELECT * FROM vcf  WHERE hgvs_p=convert_single_aa('A63T') LIMIT 5
