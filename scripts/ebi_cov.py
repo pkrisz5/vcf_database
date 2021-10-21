@@ -74,8 +74,7 @@ if __name__ == '__main__':
         buf = T.extractfile(ti)
         try:
             cov = pandas.read_csv(buf, 
-                #sys:1: FutureWarning: The error_bad_lines argument has been deprecated and will be removed in a future version.
-                error_bad_lines = False,
+                on_bad_lines = 'error',
                 names = ('id', 'ref', 'coverage'),
                 compression = 'gzip'
             )
