@@ -81,7 +81,7 @@ if __name__ == '__main__':
             )
             records = cov.shape[0]
         except Exception as e:
-            print ("{0} cannot parse file {1}: reason {3}".format(now, ti.name, str(e)))
+            print ("{0} cannot parse file {1}: reason {2}".format(now, ti.name, str(e)))
             records = -1
             cov = None
 
