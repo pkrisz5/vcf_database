@@ -137,7 +137,7 @@ if __name__ == '__main__':
         del pipe
         del COV
 
-    if coverage_table_name == 'cov':
+    if args.coverage_table_name == 'cov':
         pipe = io.StringIO()
         status = pandas.DataFrame(
             columns = ('timestamp', 'ena_run', 'integrity'),
