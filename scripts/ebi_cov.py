@@ -117,8 +117,8 @@ if __name__ == '__main__':
             C.copy_from(pipe, args.coverage_table_name)
             conn.commit()
             counter = 0
-            for c in COV:
-                del c
+            while len(COV):
+                del COV.pop()
             del COVC
             del pipe
     
@@ -137,8 +137,8 @@ if __name__ == '__main__':
         C.copy_from(pipe, args.coverage_table_name)
         conn.commit()
         del pipe
-        for c in COV:
-            del c
+        while len(COV):
+            del COV.pop()
         del COVC
 
     if args.coverage_table_name == 'cov':
