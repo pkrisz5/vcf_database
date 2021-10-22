@@ -53,8 +53,8 @@ if __name__ == '__main__':
     ts = []
     ena_run = []
     integrity = []
+    COV = []
 
-    COV = pandas.DataFrame()
     counter = 0
     while True:
         ti = T.next()
@@ -79,6 +79,7 @@ if __name__ == '__main__':
                 compression = 'gzip'
             )
             records = cov.shape[0]
+            del buf
         except Exception as e:
             print ("{0} cannot parse file {1}: reason {2}".format(now, ti.name, str(e)))
             records = -1
@@ -102,12 +103,13 @@ if __name__ == '__main__':
 
         cov['ena_run'] = runid
 
-        COV = COV.append(cov)
+        COV.append(cov)
 
         if counter == args.batch_size:
-            print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COV.shape[0]))
+            COVC = pandas.concat(COV)
+            print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
             pipe = io.StringIO()
-            COV[['ena_run', 'id', 'coverage']].to_csv(
+            COVC[['ena_run', 'id', 'coverage']].to_csv(
                     pipe, sep = '\t', header = False, index = False
             )
             pipe.seek(0)
@@ -115,18 +117,19 @@ if __name__ == '__main__':
             C.copy_from(pipe, args.coverage_table_name)
             conn.commit()
             counter = 0
-            COV = pandas.DataFrame()
+            for c in COV:
+                del c
+            del COVC
             del pipe
-    
-        del buf
     
     T.close()
     print ("{0} closed tarfile, processed records {1}".format(datetime.datetime.now(), len(ts)))
     
     if counter:
-        print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COV.shape[0]))
+        COVC = pandas.concat(COV)
+        print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
         pipe = io.StringIO()
-        COV[['ena_run', 'id', 'coverage']].to_csv(
+        COVC[['ena_run', 'id', 'coverage']].to_csv(
                 pipe, sep = '\t', header = False, index = False
         )
         pipe.seek(0)
@@ -134,7 +137,9 @@ if __name__ == '__main__':
         C.copy_from(pipe, args.coverage_table_name)
         conn.commit()
         del pipe
-        del COV
+        for c in COV:
+            del c
+        del COVC
 
     if args.coverage_table_name == 'cov':
         pipe = io.StringIO()
