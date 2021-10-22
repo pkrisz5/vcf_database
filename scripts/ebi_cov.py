@@ -118,7 +118,8 @@ if __name__ == '__main__':
             conn.commit()
             counter = 0
             while len(COV):
-                del COV.pop()
+                cov = COV.pop()
+                del cov
             del COVC
             del pipe
     
@@ -138,7 +139,8 @@ if __name__ == '__main__':
         conn.commit()
         del pipe
         while len(COV):
-            del COV.pop()
+            cov = COV.pop()
+            del cov
         del COVC
 
     if args.coverage_table_name == 'cov':
