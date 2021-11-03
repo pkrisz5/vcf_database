@@ -16,3 +16,9 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_country_samples AS
     FROM temp_group_country 
     WHERE (NOT(("clean_country") IS NULL));
 -----------------------------------------------------------------
+
+-- app_lineage_def_description
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS app_lineage_def_description AS
+  SELECT DISTINCT variant_id, pango, description
+  FROM lineage_def
