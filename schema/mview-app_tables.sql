@@ -22,3 +22,40 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_country_samples AS
 CREATE MATERIALIZED VIEW IF NOT EXISTS app_lineage_def_description AS
   SELECT DISTINCT variant_id, pango, description
   FROM lineage_def
+-----------------------------------------------------------------
+
+-- app_lineage
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS app_lineage AS
+  WITH temp_lineage1 AS (
+        SELECT "clean_collection_date", "clean_country", "variant_id", COUNT(*) AS "n"
+        FROM (SELECT "ena_run", "collection_date", "clean_country", "clean_collection_date", "variant_id"
+        FROM (SELECT "LHS"."ena_run" AS "ena_run", "LHS"."collection_date" AS "collection_date", "LHS"."clean_country" AS "clean_country", "LHS"."clean_collection_date" AS "clean_collection_date", "RHS"."variant_id" AS "variant_id", "RHS"."n" AS "n", "RHS"."required_mutation" AS "required_mutation"
+        FROM (SELECT "ena_run", "collection_date", "clean_country", "clean_collection_date"
+        FROM (SELECT *
+        FROM (SELECT "ena_run", "collection_date", CASE WHEN ("clean_country" = 'USA') THEN ('United States') WHEN NOT("clean_country" = 'USA') THEN ("clean_country") END AS "clean_country", "clean_host", "accession", "sample_accession", "experiment_accession", "study_accession", "description", "country", "first_created", "first_public", "host", "host_sex", "host_tax_id", "host_body_site", "bio_material", "culture_collection", "instrument_model", "instrument_platform", "library_layout", "library_name", "library_selection", "library_source", "library_strategy", "sequencing_method", "isolate", "strain", "base_count", "collected_by", "broker_name", "center_name", "sample_capture_status", "fastq_ftp", "collection_date_submitted", "checklist", "clean_collection_date", "date_isoweek", "date_isoyear"
+        FROM "meta") "dbplyr_359"
+        WHERE (NOT((("clean_collection_date") IS NULL)))) "dbplyr_360"
+        WHERE ("clean_host" = 'Homo sapiens')) "LHS"
+        INNER JOIN "lineage" AS "RHS"
+        ON ("LHS"."ena_run" = "RHS"."ena_run")
+) "dbplyr_361") "dbplyr_362"
+        WHERE ("clean_collection_date" > CAST('2020-01-01' AS DATE))
+        GROUP BY "clean_collection_date", "clean_country", "variant_id"
+    )
+    , temp_lineage2 AS (
+        SELECT "clean_collection_date", "clean_country", COUNT(*) AS "n_all"
+        FROM (SELECT "ena_run", "collection_date", "clean_country", "clean_collection_date"
+        FROM (SELECT *
+        FROM (SELECT *
+        FROM (SELECT "ena_run", "collection_date", CASE WHEN ("clean_country" = 'USA') THEN ('United States') WHEN NOT("clean_country" = 'USA') THEN ("clean_country") END AS "clean_country", "clean_host", "accession", "sample_accession", "experiment_accession", "study_accession", "description", "country", "first_created", "first_public", "host", "host_sex", "host_tax_id", "host_body_site", "bio_material", "culture_collection", "instrument_model", "instrument_platform", "library_layout", "library_name", "library_selection", "library_source", "library_strategy", "sequencing_method", "isolate", "strain", "base_count", "collected_by", "broker_name", "center_name", "sample_capture_status", "fastq_ftp", "collection_date_submitted", "checklist", "clean_collection_date", "date_isoweek", "date_isoyear"
+        FROM "meta") "dbplyr_367"
+        WHERE (NOT((("clean_collection_date") IS NULL)))) "dbplyr_368"
+        WHERE ("clean_host" = 'Homo sapiens')) "dbplyr_369") "dbplyr_370"
+        WHERE ("clean_collection_date" > CAST('2020-01-01' AS DATE))
+        GROUP BY "clean_collection_date", "clean_country"
+    )
+  SELECT "clean_collection_date", "clean_country", "variant_id", "n", "n_all", CAST ("n" AS numeric)/ CAST ("n_all" AS numeric)*100 AS "pct" 
+    FROM temp_lineage1 
+    INNER JOIN temp_lineage2 USING ("clean_collection_date", "clean_country");
+---------------------------------------------------------------------------------
