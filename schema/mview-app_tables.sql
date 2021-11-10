@@ -21,7 +21,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_country_samples AS
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS app_lineage_def_description AS
   SELECT DISTINCT variant_id, pango, description
-  FROM lineage_def
+  FROM lineage_def;
 -----------------------------------------------------------------
 
 -- app_lineage
@@ -76,7 +76,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_new_cases AS
       WHERE ("clean_collection_date" > CAST('2020-03-15' AS DATE))) "dbplyr_156") "dbplyr_157"
       GROUP BY "country_name", "date_year", "date_week") "LHS"
       LEFT JOIN "ecdc_covid_country_weekly" AS "RHS"
-      ON ("LHS"."country_name" = "RHS"."country_name" AND "LHS"."date_year" = "RHS"."date_year" AND "LHS"."date_week" = "RHS"."date_week")
+      ON ("LHS"."country_name" = "RHS"."country_name" AND "LHS"."date_year" = "RHS"."date_year" AND "LHS"."date_week" = "RHS"."date_week");
 ---------------------------------------------------------------------
 
 -- app_variants_weekly
@@ -95,7 +95,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_variants_weekly AS
         INNER JOIN "lineage" AS "RHS"
         ON ("LHS"."ena_run" = "RHS"."ena_run")
           ) "dbplyr_379"
-        GROUP BY "country_name", "date_year", "date_week", "variant_id"
+        GROUP BY "country_name", "date_year", "date_week", "variant_id";
 -------------------------------------------------------------------
 
 -- app_worldplot_data
@@ -115,6 +115,6 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_worldplot_data AS
         WHERE ("clean_host" = 'Homo sapiens')) "dbplyr_161"
         WHERE ("clean_collection_date" > CAST('2020-03-15' AS DATE))) "dbplyr_162"
         WHERE ("clean_collection_date" < CURRENT_DATE)) "dbplyr_163") "dbplyr_164"
-        GROUP BY "Country", "date_year", "date_week"
+        GROUP BY "Country", "date_year", "date_week";
 
 
