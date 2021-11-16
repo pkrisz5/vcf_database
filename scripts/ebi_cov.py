@@ -6,8 +6,42 @@ import pandas
 import psycopg2
 import datetime
 
-def extract_ena_run(fn):
-    return fn.split('/')[-1].split('.')[0]
+
+def bulk_insert(conn, C, snapshot, COV, uniq, cnt):
+    COVC = pandas.concat(COV)
+    print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
+    pipe = io.StringIO()
+    COVC[['ena_run', 'id', 'coverage']].to_csv(
+        pipe, sep = '\t', header = False, index = False
+    )
+    pipe.seek(0)
+    C.copy_from(pipe, args.coverage_table_name)
+    while len(COV):
+        cov = COV.pop()
+        del cov
+    del COVC
+    del pipe
+
+    if uniq is None:
+        conn.commit()
+        return
+
+    pipe = io.StringIO()
+    status = pandas.DataFrame(
+        columns = ('timestamp', 'ena_run', 'integrity'),
+        data = uniq
+    )
+    status['snapshot'] = snapshot
+        
+    status[['timestamp', 'snapshot', 'ena_run', 'integrity']].to_csv(
+        pipe, sep = '\t', header = False, index = False
+    )
+    pipe.seek(0)
+    print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
+    C.copy_from(pipe, 'unique_cov')
+    conn.commit()
+    del pipe
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -34,6 +68,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     assert os.path.exists(args.input), "File not found error: {0}".format(args.input)
+    extract_ena_run = lambda x: x.split('/')[-1].split('.')[0]
 
     conn = psycopg2.connect(
         dbname = args.database,
@@ -59,7 +94,8 @@ if __name__ == '__main__':
     while True:
         ti = T.next()
         if ti is None:
-            print ("{0} loop ends".format(datetime.datetime.now()))
+            T.close()
+            print ("{0} loop ends closed tarfile".format(datetime.datetime.now()))
             break
         if not ti.isfile():
             continue
@@ -106,58 +142,18 @@ if __name__ == '__main__':
         COV.append(cov)
 
         if counter == args.batch_size:
-            COVC = pandas.concat(COV)
-            print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
-            pipe = io.StringIO()
-            COVC[['ena_run', 'id', 'coverage']].to_csv(
-                    pipe, sep = '\t', header = False, index = False
-            )
-            pipe.seek(0)
-            contents = pipe.getvalue()
-            C.copy_from(pipe, args.coverage_table_name)
-            conn.commit()
+            uniq = zip(ts, ena_run, integrity) if args.coverage_table_name == 'cov' else None
+            bulk_insert(conn, C, snapshot, COV, uniq, counter)
             counter = 0
-            while len(COV):
-                cov = COV.pop()
-                del cov
-            del COVC
-            del pipe
-    
-    T.close()
-    print ("{0} closed tarfile, processed records {1}".format(datetime.datetime.now(), len(ts)))
+            COV = []
+            ts = []
+            ena_run = []
+            integrity = []
     
     if counter:
-        COVC = pandas.concat(COV)
-        print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
-        pipe = io.StringIO()
-        COVC[['ena_run', 'id', 'coverage']].to_csv(
-                pipe, sep = '\t', header = False, index = False
-        )
-        pipe.seek(0)
-        contents = pipe.getvalue()
-        C.copy_from(pipe, args.coverage_table_name)
-        conn.commit()
-        del pipe
-        while len(COV):
-            cov = COV.pop()
-            del cov
-        del COVC
+        uniq = zip(ts, ena_run, integrity) if args.coverage_table_name == 'cov' else None
+        bulk_insert(conn, C, snapshot, COV, uniq, counter)
 
-    if args.coverage_table_name == 'cov':
-        pipe = io.StringIO()
-        status = pandas.DataFrame(
-            columns = ('timestamp', 'ena_run', 'integrity'),
-            data = zip(ts, ena_run, integrity)
-        )
-        status['snapshot'] = snapshot
-        
-        status[['timestamp', 'snapshot', 'ena_run', 'integrity']].to_csv(
-            pipe, sep = '\t', header = False, index = False
-        )
-        pipe.seek(0)
-        contents = pipe.getvalue()
-        C.copy_from(pipe, 'unique_cov')
-        conn.commit()
     
     C.close()
     conn.close()
