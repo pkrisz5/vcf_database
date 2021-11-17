@@ -20,6 +20,7 @@ def bulk_insert(conn, C, snapshot, COV, uniq, cnt):
         cov = COV.pop()
         del cov
     del COVC
+    pipe.close()
     del pipe
 
     if uniq is None:
@@ -40,6 +41,7 @@ def bulk_insert(conn, C, snapshot, COV, uniq, cnt):
     print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
     C.copy_from(pipe, 'unique_cov')
     conn.commit()
+    pipe.close()
     del pipe
 
 
@@ -115,11 +117,13 @@ if __name__ == '__main__':
                 compression = 'gzip'
             )
             records = cov.shape[0]
-            del buf
         except Exception as e:
             print ("{0} cannot parse file {1}: reason {2}".format(now, ti.name, str(e)))
             records = -1
             cov = None
+        finally:
+            buf.close()
+            del buf
 
         if records == 0:
             integrity.append('empty file')
