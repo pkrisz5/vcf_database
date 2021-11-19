@@ -185,7 +185,7 @@ if __name__ == '__main__':
         try:
             vcf = pandas.read_csv(buf, 
                   comment = '#',
-#                  on_bad_lines = 'error',
+                  on_bad_lines = 'error',
                   sep = '\t',
                   names = ('CHROM', 'pos', 'ID', 'ref', 'alt', 'QUAL', 'filter', 'INFO'),
                   dtype = { 'pos': int },
