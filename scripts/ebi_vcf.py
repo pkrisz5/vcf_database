@@ -95,7 +95,7 @@ if __name__ == '__main__':
                      help = "the name of the target vcf table in the database", default = 'vcf')
     parser.add_argument("-k", "--vcfkey_table_name", action = "store",
                      help = "the name of the target vcf key table in the database", default = 'vcf_key')
-    parser.add_argument("-u", "--vcfunique_table_name", action = "store",
+    parser.add_argument("-m", "--vcfunique_table_name", action = "store",
                      help = "the name of the target vcf unique table in the database", default = 'unique_vcf')
     parser.add_argument("-a", "--vcfannotation_table_name", action = "store",
                      help = "the name of the target vcf annotation table in the database", default = 'annotation')

@@ -66,7 +66,7 @@ if __name__ == '__main__':
                      help = "insert maximum batch size samples in a single database transaction", default = 500)
     parser.add_argument("-t", "--cov_table_name", action = "store",
                      help = "the name of the target coverage table in the database", default = 'cov')
-    parser.add_argument("-u", "--covunique_table_name", action = "store",
+    parser.add_argument("-m", "--covunique_table_name", action = "store",
                      help = "the name of the target cov unique table in the database", default = 'unique_cov')
     parser.add_argument("-F", "--commit_when_finished", action = "store_true",
                      help = "commit transaction only in the very end")
