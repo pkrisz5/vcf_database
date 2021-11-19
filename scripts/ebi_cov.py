@@ -7,7 +7,7 @@ import psycopg2
 import datetime
 
 
-def bulk_insert(conn, C, snapshot, COV, uniq, cnt):
+def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
     COVC = pandas.concat(COV)
     print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
     pipe = io.StringIO()
@@ -15,17 +15,12 @@ def bulk_insert(conn, C, snapshot, COV, uniq, cnt):
         pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
-    C.copy_from(pipe, args.coverage_table_name)
+    C.copy_from(pipe, tables['t_cov'])
     while len(COV):
         cov = COV.pop()
         del cov
     del COVC
     pipe.close()
-    del pipe
-
-    if uniq is None:
-        conn.commit()
-        return
 
     pipe = io.StringIO()
     status = pandas.DataFrame(
@@ -39,9 +34,11 @@ def bulk_insert(conn, C, snapshot, COV, uniq, cnt):
     )
     pipe.seek(0)
     print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
-    C.copy_from(pipe, 'unique_cov')
-    conn.commit()
+    C.copy_from(pipe, tables['t_meta'])
     pipe.close()
+
+    if not skip_commit:
+        conn.commit()
     del pipe
 
 
@@ -57,6 +54,8 @@ if __name__ == '__main__':
                      help = "database server port", default = os.getenv('DB_PORT', 5432))
     parser.add_argument("-D", "--database", action = "store",
                      help = "database name", default = os.getenv('DB', 'coveo'))
+    parser.add_argument("-S", "--schema", action = "store",
+                     help = "schema name", default = os.getenv('DB_SCHEMA', 'ebi'))
     parser.add_argument("-u", "--user", action = "store",
                      help = "database user", default = os.getenv('SECRET_USERNAME'))
     parser.add_argument("-p", "--password", action = "store",
@@ -65,12 +64,22 @@ if __name__ == '__main__':
                      help = "keep only those positions where the coverage value is below the threshold", default = 100)
     parser.add_argument("-b", "--batch_size", action = "store",
                      help = "insert maximum batch size samples in a single database transaction", default = 500)
-    parser.add_argument("-t", "--coverage_table_name", action = "store",
-                     help = "the name of the target table in the database", default = 'cov')
+    parser.add_argument("-t", "--cov_table_name", action = "store",
+                     help = "the name of the target coverage table in the database", default = 'cov')
+    parser.add_argument("-u", "--covunique_table_name", action = "store",
+                     help = "the name of the target cov unique table in the database", default = 'unique_cov')
+    parser.add_argument("-F", "--commit_when_finished", action = "store_true",
+                     help = "commit transaction only in the very end")
     args = parser.parse_args()
 
     assert os.path.exists(args.input), "File not found error: {0}".format(args.input)
     extract_ena_run = lambda x: x.split('/')[-1].split('.')[0]
+
+
+    tables = {
+        't_cov': "{}.{}".format(args.schema, args.cov_table_name),
+        't_meta': "{}.{}".format(args.schema, args.covunique_table_name),
+    }
 
     conn = psycopg2.connect(
         dbname = args.database,
@@ -146,8 +155,8 @@ if __name__ == '__main__':
         COV.append(cov)
 
         if counter == args.batch_size:
-            uniq = zip(ts, ena_run, integrity) if args.coverage_table_name == 'cov' else None
-            bulk_insert(conn, C, snapshot, COV, uniq, counter)
+            uniq = zip(ts, ena_run, integrity)
+            bulk_insert(args.commit_when_finished, tables, conn, C, snapshot, COV, uniq, counter)
             counter = 0
             COV = []
             ts = []
@@ -155,8 +164,11 @@ if __name__ == '__main__':
             integrity = []
     
     if counter:
-        uniq = zip(ts, ena_run, integrity) if args.coverage_table_name == 'cov' else None
-        bulk_insert(conn, C, snapshot, COV, uniq, counter)
+        uniq = zip(ts, ena_run, integrity)
+        bulk_insert(args.commit_when_finished, tables, conn, C, snapshot, COV, uniq, counter)
+
+    if args.commit_when_finished:
+        conn.commit()
 
     
     C.close()
