@@ -133,7 +133,7 @@ if __name__ == '__main__':
     tables = {
         't_vcf': "{}.{}".format(args.schema, args.vcf_table_name),
         't_key': "{}.{}".format(args.schema, args.vcfkey_table_name),
-        't_annot': "{}.{}".format(args.schema, args.vcfannotation_table_name),
+        't_ann': "{}.{}".format(args.schema, args.vcfannotation_table_name),
         't_meta': "{}.{}".format(args.schema, args.vcfunique_table_name),
     }
     
