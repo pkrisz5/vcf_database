@@ -9,7 +9,7 @@ import datetime
 import gzip
 
 
-def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, uniq, cnt):
+def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, uniq, cnt):
     VCFC = pandas.concat(VCF)
     VCFC.reset_index(inplace = True)
     VCFC.drop(columns = ['index'], inplace = True)
@@ -29,13 +29,12 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, uniq, 
     VCFC[['index', 'qual', 'dp', 'af', 'sb',
      'count_ref_forward_base', 'count_ref_reverse_base',
      'count_alt_forward_base', 'count_alt_reverse_base',
-     'hrun', 'indel', 'lof', 'nmd', 'major', 'ann_num']].to_csv(
+     'hrun', 'indel', 'nmd', 'major', 'ann_num']].to_csv(
             pipe, sep = '\t', header = False, index = False, na_rep = 'None'
     )
     pipe.seek(0)
     C.copy_from(pipe, tables['t_vcf'], null = 'None')
     pipe.close()
-    #del pipe
     
     ANNC = pandas.concat(ANN).merge(VCFC, how = 'left', on = ('ena_run', 'pos', 'ref', 'alt'))
     pipe = io.StringIO()
@@ -47,6 +46,15 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, uniq, 
     )
     pipe.seek(0)
     C.copy_from(pipe, tables['t_ann'], null = 'None')
+    pipe.close()
+
+    LOFC = pandas.concat(LOF).merge(VCFC, how = 'left', on = ('ena_run', 'pos', 'ref', 'alt'))
+    pipe = io.StringIO()
+    LOFC[['index', 'lof']].to_csv(
+            pipe, sep = '\t', header = False, index = False, na_rep = 'None'
+    )
+    pipe.seek(0)
+    C.copy_from(pipe, tables['t_lof'], null = 'None')
     pipe.close()
 
     pipe = io.StringIO()
@@ -99,6 +107,8 @@ if __name__ == '__main__':
                      help = "the name of the target vcf unique table in the database", default = 'unique_vcf')
     parser.add_argument("-a", "--vcfannotation_table_name", action = "store",
                      help = "the name of the target vcf annotation table in the database", default = 'annotation')
+    parser.add_argument("-l", "--vcflof_table_name", action = "store",
+                     help = "the name of the target vcf lof table in the database", default = 'vcf_lof')
     parser.add_argument("-F", "--commit_when_finished", action = "store_true",
                      help = "commit transaction only in the very end")
     args = parser.parse_args()
@@ -113,6 +123,7 @@ if __name__ == '__main__':
     indel = lambda x: 'INDEL' in x
     proc_dp4 = lambda x: dict(zip(dp4_labels, x['DP4'].split(',')))
     proc_ann = lambda x: list(map(lambda y: dict(zip(ann_labels, y.split('|'))), x['ANN'].split(',')))
+    proc_lof = lambda x: x['LOF'].split(',') if 'LOF' in x else None
     before_per = lambda x: x.split('/')[0] if '/' in x else None
     after_per = lambda x: x.split('/')[1] if '/' in x else None
     qual = lambda x: None if (x is None) or (x == '.') else int(x)
@@ -134,6 +145,7 @@ if __name__ == '__main__':
         't_vcf': "{}.{}".format(args.schema, args.vcf_table_name),
         't_key': "{}.{}".format(args.schema, args.vcfkey_table_name),
         't_ann': "{}.{}".format(args.schema, args.vcfannotation_table_name),
+        't_lof': "{}.{}".format(args.schema, args.vcflof_table_name),
         't_meta': "{}.{}".format(args.schema, args.vcfunique_table_name),
     }
     
@@ -163,6 +175,7 @@ if __name__ == '__main__':
     integrity = []
     VCF = []
     ANN = []
+    LOF = []
 
     counter = 0
     while True:
@@ -211,6 +224,7 @@ if __name__ == '__main__':
         info_dict_seq = vcf['INFO'].apply(info_dict)
         dp4_seq = info_dict_seq.apply(proc_dp4)
         ann_seq = info_dict_seq.apply(proc_ann)
+        lof_seq = info_dict_seq.apply(proc_lof).dropna()
         
         vcf['ena_run'] = runid
         vcf['indel'] = vcf['INFO'].apply(indel)
@@ -220,7 +234,6 @@ if __name__ == '__main__':
         for l in dp4_labels:
             vcf[l] = dp4_seq.apply(lambda x: x.get(l))
         vcf['major'] = info_dict_seq.apply(lambda x: x.get('MAJOR'))
-        vcf['lof'] = info_dict_seq.apply(lambda x: x.get('LOF'))
         vcf['nmd'] = info_dict_seq.apply(lambda x: x.get('NMD'))
         vcf['sb'] = info_dict_seq.apply(lambda x: x.get('SB'))
         vcf['hrun'] = info_dict_seq.apply(lambda x: x.get('HRUN'))
@@ -234,11 +247,10 @@ if __name__ == '__main__':
             for i in l:
                 data.append(i)
                 index.append(x)
-
         ann = pandas.DataFrame(data = data, index = index).join(vcf)
         ann.drop(columns = ['ID', 'filter', 'indel', 'dp', 'af',
                'count_ref_forward_base', 'count_ref_reverse_base',
-               'count_alt_forward_base', 'count_alt_reverse_base', 'major', 'lof',
+               'count_alt_forward_base', 'count_alt_reverse_base', 'major',
                'nmd', 'sb', 'hrun', 'ann_num', 'qual', 'allele', 'gene_id'],
               inplace = True)
         ann['cdna_pos'] = ann['cdna_pos__cdna_length'].apply(before_per)
@@ -252,23 +264,32 @@ if __name__ == '__main__':
         ann['rank_'] = ann['rank_'].apply(na)
         ann['distance'] = ann['distance'].apply(lambda x: int(x) if x else None)
         
+        data = []
+        index = []
+        for x, l in lof_seq.iteritems():
+            for i in l:
+                data.append(i)
+                index.append(x)
+        lof = pandas.DataFrame(data = data, index = index, columns = ['lof']).join(vcf[['ena_run', 'pos', 'ref', 'alt']])
         
         VCF.append(vcf)
         ANN.append(ann)
+        LOF.append(lof)
 
         if counter == args.batch_size:
             uniq = zip(ts, ena_run, integrity)
-            offset = bulk_insert(args.commit_when_finished, tables, offset, conn, C, snapshot, VCF, ANN, uniq, counter)
+            offset = bulk_insert(args.commit_when_finished, tables, offset, conn, C, snapshot, VCF, ANN, LOF, uniq, counter)
             counter = 0
             VCF = []
             ANN = []
+            LOF = []
             ts = []
             ena_run = []
             integrity = []
     
     if counter:
         uniq = zip(ts, ena_run, integrity)
-        bulk_insert(args.commit_when_finished, tables, offset, conn, C, snapshot, VCF, ANN, uniq, counter)
+        bulk_insert(args.commit_when_finished, tables, offset, conn, C, snapshot, VCF, ANN, LOF, uniq, counter)
 
     if args.commit_when_finished:
         conn.commit()
