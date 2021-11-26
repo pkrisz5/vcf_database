@@ -2,6 +2,12 @@
 
 CREATE TYPE ebi.type_integrity AS ENUM ('ok', 'empty file', 'corrupt file');
 
+-- metadata related types
+
+CREATE TYPE ebi.type_sex AS ENUM ('male', 'female');
+CREATE TYPE ebi.type_layout AS ENUM ('single', 'paired');
+CREATE TYPE ebi.type_status AS ENUM ('active surveillance in response to outbreak', 'active surveillance not initiated by an outbreak', 'other');
+
 -- vcf table related types
 
 CREATE TYPE ebi.type_lof AS ENUM (
