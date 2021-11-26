@@ -23,6 +23,11 @@ spec:
   containers:
   - image: postgres:11.12
     name: postgres
+    resources:
+      requests:
+        memory: "10G"
+      limits:
+        memory: "11G"
     ports:
       - containerPort: 5432
         name: postgres
@@ -44,4 +49,4 @@ spec:
   volumes:
     - name: svcdata
       persistentVolumeClaim:
-        claimName: pvc-postgres
+        claimName: pvc-postgres-ssd

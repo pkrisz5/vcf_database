@@ -12,6 +12,11 @@ spec:
       - sleep
       - infinity
     name: postgres-shell
+    resources:
+      requests:
+        memory: "13G"
+      limits:
+        memory: "14G"
     env:
       - name: SCHEMA_PATH
         value: /mnt/repo/schema/
@@ -43,5 +48,5 @@ spec:
   volumes:
     - name: pv-x
       persistentVolumeClaim:
-        claimName: pvc-raw
+        claimName: pvc-raw-ssd
 

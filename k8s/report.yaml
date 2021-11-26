@@ -33,7 +33,11 @@ spec:
     - containerPort: 3838
       name: shinyreport
       protocol: TCP
-    resources: {}
+    resources:
+      requests:
+        memory: "2G"
+      limits:
+        memory: "4G"
     volumeMounts:
     - mountPath: /srv/report/helloworld
       name: pv
@@ -51,7 +55,7 @@ spec:
   volumes:
   - name: pv
     persistentVolumeClaim:
-      claimName: pvc-raw
+      claimName: pvc-raw-ssd
 ---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
