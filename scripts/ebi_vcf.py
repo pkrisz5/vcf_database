@@ -8,25 +8,28 @@ import datetime
 #import numpy
 import gzip
 
+KEY = [ 'ena_run', 'pos', 'ref', 'alt' ]
 
 def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, uniq, cnt):
     VCFC = pandas.concat(VCF)
-    VCFC.reset_index(inplace = True)
-    VCFC.drop(columns = ['index'], inplace = True)
-    VCFC.reset_index(inplace = True)
-    VCFC['index'] += offset
-    keymax = VCFC['index'].max() + 1
     print ("{0} pushing {1} records in db".format(datetime.datetime.now(), VCFC.shape[0]))
-    C.execute("SET search_path TO ebi")
+
     pipe = io.StringIO()
-    VCFC[['index', 'ena_run', 'pos', 'ref', 'alt']].to_csv(
+    VCFKEY = VCFC[KEY].drop_duplicates().reset_index()
+    VCFKEY.drop(columns = ['index'], inplace = True)
+    VCFKEY.reset_index(inplace = True)
+    VCFKEY['index'] += offset
+    keymax = VCFKEY['index'].max() + 1
+    C.execute("SET search_path TO ebi")
+    VCFKEY[['index', 'ena_run', 'pos', 'ref', 'alt']].to_csv(
             pipe, sep = '\t', header = False, index = False, na_rep = 'None'
     )
     pipe.seek(0)
     C.copy_from(pipe, tables['t_key'], null = 'None')
     pipe.close()
+
     pipe = io.StringIO()
-    VCFC[['index', 'qual', 'dp', 'af', 'sb',
+    VCFC.merge(VCFKEY, how = 'left', on = KEY)[['index', 'qual', 'dp', 'af', 'sb',
      'count_ref_forward_base', 'count_ref_reverse_base',
      'count_alt_forward_base', 'count_alt_reverse_base',
      'hrun', 'indel', 'nmd', 'major', 'ann_num']].to_csv(
@@ -36,8 +39,8 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
     C.copy_from(pipe, tables['t_vcf'], null = 'None')
     pipe.close()
     
-    ANNC = pandas.concat(ANN).merge(VCFC, how = 'left', on = ('ena_run', 'pos', 'ref', 'alt'))
     pipe = io.StringIO()
+    ANNC = pandas.concat(ANN).merge(VCFKEY, how = 'left', on = KEY)
     ANNC[['index', 'annotation', 'annotation_impact', 'gene_name', 'feature_type',
       'feature_id', 'transcript_biotype', 'rank_', 'hgvs_c', 'hgvs_p', 'cdna_pos',
       'cdna_length', 'cds_pos', 'cds_length', 'aa_pos', 'aa_length', 'distance',
@@ -48,8 +51,8 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
     C.copy_from(pipe, tables['t_ann'], null = 'None')
     pipe.close()
 
-    LOFC = pandas.concat(LOF).merge(VCFC, how = 'left', on = ('ena_run', 'pos', 'ref', 'alt'))
     pipe = io.StringIO()
+    LOFC = pandas.concat(LOF).merge(VCFKEY, how = 'left', on = KEY)
     LOFC[['index', 'lof']].to_csv(
             pipe, sep = '\t', header = False, index = False, na_rep = 'None'
     )
@@ -63,7 +66,6 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
         data = uniq
     )
     status['snapshot'] = snapshot
-        
     status[['timestamp', 'snapshot', 'ena_run', 'integrity']].to_csv(
         pipe, sep = '\t', header = False, index = False
     )
@@ -74,7 +76,6 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
 
     if not skip_commit:
         conn.commit()
-    del pipe
     return keymax
 
 
@@ -247,11 +248,8 @@ if __name__ == '__main__':
             for i in l:
                 data.append(i)
                 index.append(x)
-        ann = pandas.DataFrame(data = data, index = index).join(vcf)
-        ann.drop(columns = ['ID', 'filter', 'indel', 'dp', 'af',
-               'count_ref_forward_base', 'count_ref_reverse_base',
-               'count_alt_forward_base', 'count_alt_reverse_base', 'major',
-               'nmd', 'sb', 'hrun', 'ann_num', 'qual', 'allele', 'gene_id'],
+        ann = pandas.DataFrame(data = data, index = index).join(vcf[KEY])
+        ann.drop(columns = ['allele', 'gene_id'],
               inplace = True)
         ann['cdna_pos'] = ann['cdna_pos__cdna_length'].apply(before_per)
         ann['cdna_length'] = ann['cdna_pos__cdna_length'].apply(after_per)
@@ -270,7 +268,7 @@ if __name__ == '__main__':
             for i in l:
                 data.append(i)
                 index.append(x)
-        lof = pandas.DataFrame(data = data, index = index, columns = ['lof']).join(vcf[['ena_run', 'pos', 'ref', 'alt']])
+        lof = pandas.DataFrame(data = data, index = index, columns = ['lof']).join(vcf[KEY])
         
         VCF.append(vcf)
         ANN.append(ann)
