@@ -1,5 +1,0 @@
-WHO_label	pango	type_variant	description	amino_acid_change	protein_codon_position	REF_protein	ALT_protein	gene	effect	ref_pos_alt	ref	alt
-Alpha	B.1.1.7	VOC	This variant was first detected in the United Kingdom at the end of 2020 and is now widely spread globally. This variant is associated with increased transmissibility.	N501Y	501	N	Y	S	missense_variant	A23063T	A	T
-Alpha	B.1.1.7	VOC	This variant was first detected in the United Kingdom at the end of 2020 and is now widely spread globally. This variant is associated with increased transmissibility.	A570D	570	A	D	S	missense_variant	C23271A	C	A
-Alpha	B.1.1.7	VOC	This variant was first detected in the United Kingdom at the end of 2020 and is now widely spread globally. This variant is associated with increased transmissibility.	P681H	681	P	H	S	missense_variant	C23604A	C	A
-Alpha	B.1.1.7	VOC	This variant was first detected in the United Kingdom at the end of 2020 and is now widely spread globally. This variant is associated with increased transmissibility.	T716I	716	T	I	S	missense_variant	C23709T	C	T
