@@ -4,7 +4,7 @@ library(RPostgreSQL)
 
 print(paste(Sys.time(), "started...", sep = " "))
 
-lineage_def <- read_delim(file = "/mnt/repo/data/table_variants_veo.csv", delim = "\t")
+lineage_def <- read_delim(file = "/mnt/repo/data/table_variants_veo.tsv", delim = "\t")
 
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
