@@ -12,8 +12,8 @@ db = os.getenv('DB')
 
 p = os.getenv('SCHEMA_PATH', '../schema')
 
-#tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
-tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
+tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'lineage_def', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
+#tables = [ 'cov', 'vcf_all', 'vcf', 'meta', 'ecdc_covid_country_weekly', 'operation', 'unique_cov', 'unique_vcf' ]
 mviews = [ 'unique_ena_run_summary', 'lineage0', 'lineage_base', 'lineage_other', 'lineage_not_analyzed', 'lineage' ]
 
 
@@ -228,6 +228,7 @@ CREATE TABLE vcf_append AS
         db_exec( "ALTER INDEX IF EXISTS idx_cov_pos_coverage_ RENAME TO idx_cov_pos_coverage", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_pos_ RENAME TO idx_vcf_pos", transaction = True )
         db_exec( "ALTER INDEX IF EXISTS idx_vcf_ena_run_ RENAME TO idx_vcf_ena_run", transaction = True )
+        db_exec( "ALTER TABLE IF EXISTS lineage_def_append RENAME TO lineage_def", transaction = True )
         for mv in mviews:
             db_exec( f"ALTER MATERIALIZED VIEW IF EXISTS {mv}_append RENAME TO {mv}", transaction = True )
 
