@@ -217,6 +217,7 @@ CREATE TABLE vcf_append AS
         db_exec( "DROP TABLE IF EXISTS vcf CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS cov CASCADE", transaction = True )
         db_exec( "DROP TABLE IF EXISTS meta CASCADE", transaction = True )
+        db_exec( "DROP TABLE IF EXISTS lineage_def CASCADE", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS unique_cov_append RENAME TO unique_cov", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS unique_vcf_append RENAME TO unique_vcf", transaction = True )
         db_exec( "ALTER TABLE IF EXISTS vcf_all_append RENAME TO vcf_all", transaction = True )
