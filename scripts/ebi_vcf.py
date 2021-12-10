@@ -260,7 +260,8 @@ if __name__ == '__main__':
         ann.drop(columns = ['cdna_pos__cdna_length', 'cds_pos__cds_length', 'aa_pos__aa_length'], inplace = True)
         ann['transcript_biotype'] = ann['transcript_biotype'].apply(na)
         ann['rank_'] = ann['rank_'].apply(na)
-        ann['distance'] = ann['distance'].apply(lambda x: int(x) if x else None)
+        #ann['distance'] = ann['distance'].apply(lambda x: int(x) if x else None)
+        ann['distance'] = ann['distance'].astype(pandas.Int32Dtype())
         
         data = []
         index = []
