@@ -47,12 +47,12 @@ spec:
               name: pg-admin-ebi
               key: admin
         - name: PGDATA
-          value: /var/lib/postgresql/data
+          value: /var/lib/postgresql/data_prod
         volumeMounts:
-        - name: svcdata
-          mountPath: /var/lib/postgresql/data
-          subPath: data
+        - name: nfs
+          mountPath: /var/lib/postgresql/data_prod
+          subPath: prod
       volumes:
-        - name: svcdata
+        - name: nfs
           persistentVolumeClaim:
             claimName: pvc-postgres-ssd
