@@ -22,11 +22,11 @@ spec:
               name: pg-admin-ebi
               key: admin
         volumeMounts:
-          - name: svcdata
-            mountPath: /var/lib/postgresql/data
+          - name: nfs
+            mountPath: /volume
         command: ["/bin/sh"]
-        args: [ "-c", "pg_dump -Fc -U ${POSTGRES_USER} -h postgres-kooplex -p 5432 --verbose
-                --file=/var/lib/postgresql/data/pg_staging_backup.dump postgres" ]
+        args: [ "-c", "pg_dump -Fc -U ${POSTGRES_USER} -h postgres-kooplex-staging -p 5431 --verbose
+                --file=/volume/pg_staging_backup.dump postgres" ]
       - name: job-prod
         image: postgres:11.12
         env:
@@ -41,18 +41,18 @@ spec:
               name: pg-admin-ebi
               key: admin
         volumeMounts:
-          - name: svcdata
-            mountPath: /var/lib/postgresql/data
+          - name: nfs
+            mountPath: /volume
         command: ["/bin/sh"]
         args: [ "-c", "pg_restore -U ${POSTGRES_USER} -h postgres-kooplex-prod -p 5433 -d postgres --clean --if-exists
-                --single-transaction --verbose /var/lib/postgresql/data/pg_staging_backup.dump" ]
+                --single-transaction --verbose /volume/pg_staging_backup.dump" ]
       containers:
       - name: job-migration
         image: alpine:3.14
         command: ['sh', '-c', 'echo "job-staging and job-prod completed"']
       restartPolicy: Never
       volumes:
-        - name: svcdata
+        - name: nfs
           persistentVolumeClaim:
-            claimName: pvc-postgres-ssd
+            claimName: nfs
   backoffLimit: 0
