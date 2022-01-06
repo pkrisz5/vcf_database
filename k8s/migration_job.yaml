@@ -24,9 +24,10 @@ spec:
         volumeMounts:
           - name: nfs
             mountPath: /volume
+            subPath: transfer
         command: ["/bin/sh"]
         args: [ "-c", "pg_dump -Fc -U ${POSTGRES_USER} -h postgres-kooplex-staging -p 5431 --verbose
-                --file=/volume/pg_staging_backup.dump postgres" ]
+                --file=/volume/pg_staging_backup.dump kooplex_ebi" ]
       - name: job-prod
         image: postgres:11.12
         env:
@@ -43,8 +44,9 @@ spec:
         volumeMounts:
           - name: nfs
             mountPath: /volume
+            subPath: transfer
         command: ["/bin/sh"]
-        args: [ "-c", "pg_restore -U ${POSTGRES_USER} -h postgres-kooplex-prod -p 5433 -d postgres --clean --if-exists
+        args: [ "-c", "pg_restore -U ${POSTGRES_USER} -h postgres-kooplex-prod -p 5433 -d kooplex_ebi --clean --if-exists
                 --single-transaction --verbose /volume/pg_staging_backup.dump" ]
       containers:
       - name: job-migration
@@ -54,5 +56,5 @@ spec:
       volumes:
         - name: nfs
           persistentVolumeClaim:
-            claimName: nfs
+            claimName: pvc-postgres-ssd
   backoffLimit: 0
