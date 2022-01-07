@@ -7,8 +7,8 @@ spec:
   - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
-  storageClassName: default-cinder
+      storage: 4Ti
+  storageClassName: example-nfs
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -20,4 +20,4 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 6Gi
+      storage: 2Ti
