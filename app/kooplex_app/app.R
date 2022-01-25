@@ -16,10 +16,10 @@ library(jsTreeR)
 app_version <- "v_002.002"
 
 # Connection details
-Sys.getenv(c("DB"))
-Sys.getenv(c("DB_HOST"))
-Sys.getenv(c("DB_PORT"))
-Sys.getenv(c("SECRET_USERNAME"))
+print(Sys.getenv(c("DB")))
+print(Sys.getenv(c("DB_HOST")))
+print(Sys.getenv(c("DB_PORT")))
+print(Sys.getenv(c("SECRET_USERNAME")))
 
 con <- dbPool(
   drv = RPostgreSQL::PostgreSQL(),
