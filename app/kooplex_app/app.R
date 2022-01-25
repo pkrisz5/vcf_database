@@ -6,6 +6,7 @@ library(lubridate)
 library(plotly)
 library(highcharter)
 library(pool)
+library(config)
 library(shinyBS)
 library(ISOweek)
 library(NGLVieweR)
@@ -16,19 +17,21 @@ library(jsTreeR)
 app_version <- "v_002.002"
 
 # Connection details
-print(Sys.getenv(c("DB")))
-print(Sys.getenv(c("DB_HOST")))
-print(Sys.getenv(c("DB_PORT")))
-print(Sys.getenv(c("SECRET_USERNAME")))
 
+
+config <- config::get()
 con <- dbPool(
   drv = RPostgreSQL::PostgreSQL(),
-  dbname = Sys.getenv(c("DB")),
-  host = Sys.getenv(c("DB_HOST")),
-  port = Sys.getenv(c("DB_PORT")),
-  user = Sys.getenv(c("SECRET_USERNAME")),
-  password = Sys.getenv(c("SECRET_PASSWORD"))
+  dbname = config$dbname,
+  host = config$host,
+  port = config$port,
+  user = config$user,
+  password = config$password
 )
+
+
+
+
 
 onStop(function() {
   poolClose(con)
