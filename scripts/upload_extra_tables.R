@@ -1,6 +1,7 @@
 # Uploading variois tables from different sources
 
 library(tidyverse)
+library(DBI)
 
 con <- DBI::dbConnect(RPostgreSQL::PostgreSQL(),
                       dbname = Sys.getenv(c("DB")),
