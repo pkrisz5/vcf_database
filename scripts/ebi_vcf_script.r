@@ -166,7 +166,8 @@ if (nrow(ids) != 0) {
     if (nrow(vcf) != 0) {
       vcf <- vcf %>%
       mutate(ann = ifelse(vcf$ann=="INDEL", indel, ann)) %>%
-      mutate(indel = ifelse(!is.na(vcf$indel), TRUE, FALSE)) 
+      mutate(indel = ifelse(str_detect(string = vcf$indel, pattern = "ANN"), TRUE, FALSE)) %>%
+      mutate(indel = ifelse(is.na(vcf$indel), FALSE, indel)) 
     k <- max(str_count(vcf$ann, pattern = "\\,"), 1L  ) # maximum annotate version
     a <- as_tibble(str_split_fixed(vcf$ann, pattern = "\\,", n=k)  ) 
     vcf <- cbind(vcf, a) %>%
