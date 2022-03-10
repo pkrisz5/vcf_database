@@ -79,3 +79,17 @@ amino_acid_symbol <- read_tsv("https://raw.githubusercontent.com/pkrisz5/vcf_dat
                               col_types = "ccc")
 dbWriteTable(con, "amino_acid_symbol", amino_acid_symbol , overwrite = TRUE, row.names = FALSE)
 
+##################################################################
+# Table: "lamp_primers"
+
+url <- c("https://raw.githubusercontent.com/pkrisz5/vcf_database/main/data/lamp_primers.tsv")
+lamp_primers <- read_tsv(file = url, skip = 1,
+                        col_names = c("target_gene",	"origin",	"country",	"cat_type",	"primer_name",
+                                      "type",	"original_primer_name",	"primer_sequence_5_3",	"target_sequence_start_pos",
+                                      "target_sequence_end_pos",	"primer_size_bp",	"reference_genome",
+                                      "update_time",	"doi",	"reference" ),
+                        col_types = c("cccccccciiicccc")) 
+
+dbWriteTable(con, "lamp_primers", lamp_primers , overwrite = TRUE, row.names = FALSE)
+dbSendQuery(con, "GRANT SELECT ON lamp_primers TO kooplex_reader;")
+
