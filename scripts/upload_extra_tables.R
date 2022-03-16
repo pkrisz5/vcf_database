@@ -63,10 +63,10 @@ dbWriteTable(con, "primer_artic_v4", primer_artic_v4 , overwrite = TRUE, row.nam
 
 url <- c("https://raw.githubusercontent.com/pkrisz5/vcf_database/main/data/pcr_primers.tsv")
 pcr_primers <- read_tsv(file = url, skip = 1,
-                        col_names = c("target_gene", "origin", "country", "type", "primer_name", "original_primer_name",
+                        col_names = c("target_gene", "origin", "country", "type", "primer_name", "primer_set", "original_primer_name",
                                       "target_sequence", "target_sequence_start_post", "target_sequence_end_pos", "primer_size_bp", "reference_genome",
                                       "update_time", "doi", "reference", "other_reference" ),
-                        col_types = c("ccccccciiiccccc")) 
+                        col_types = c("cccccccciiiccccc")) 
 
 dbWriteTable(con, "pcr_primers", pcr_primers , overwrite = TRUE, row.names = FALSE)
 dbSendQuery(con, "GRANT SELECT ON pcr_primers TO kooplex_reader;")
