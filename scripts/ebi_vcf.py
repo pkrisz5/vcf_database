@@ -22,10 +22,10 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
     keymax = VCFKEY['index'].max() + 1
     C.execute("SET search_path TO ebi")
     VCFKEY[['index', 'ena_run', 'pos', 'ref', 'alt']].to_csv(
-            pipe, sep = '\t', header = False, index = False, na_rep = 'None'
+            pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
-    C.copy_from(pipe, tables['t_key'], null = 'None')
+    C.copy_expert(f"COPY {tables['t_key']} FROM STDIN", pipe)
     pipe.close()
 
     pipe = io.StringIO()
@@ -33,10 +33,10 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
      'count_ref_forward_base', 'count_ref_reverse_base',
      'count_alt_forward_base', 'count_alt_reverse_base',
      'hrun', 'indel', 'nmd', 'major', 'ann_num']].to_csv(
-            pipe, sep = '\t', header = False, index = False, na_rep = 'None'
+            pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
-    C.copy_from(pipe, tables['t_vcf'], null = 'None')
+    C.copy_expert(f"COPY {tables['t_vcf']} FROM STDIN WITH (format csv, delimiter '\t', force_null (qual))", pipe)
     pipe.close()
     
     pipe = io.StringIO()
@@ -45,19 +45,19 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
       'feature_id', 'transcript_biotype', 'rank_', 'hgvs_c', 'hgvs_p', 'cdna_pos',
       'cdna_length', 'cds_pos', 'cds_length', 'aa_pos', 'aa_length', 'distance',
       'errors_warnings_info']].to_csv(
-            pipe, sep = '\t', header = False, index = False, na_rep = 'None'
+            pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
-    C.copy_from(pipe, tables['t_ann'], null = 'None')
+    C.copy_expert(f"COPY {tables['t_ann']} FROM STDIN WITH (format csv, delimiter '\t', force_null (distance))", pipe)
     pipe.close()
 
     pipe = io.StringIO()
     LOFC = pandas.concat(LOF).merge(VCFKEY, how = 'left', on = KEY)
     LOFC[['index', 'lof']].to_csv(
-            pipe, sep = '\t', header = False, index = False, na_rep = 'None'
+            pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
-    C.copy_from(pipe, tables['t_lof'], null = 'None')
+    C.copy_expert(f"COPY {tables['t_lof']} FROM STDIN", pipe)
     pipe.close()
 
     pipe = io.StringIO()
@@ -71,7 +71,7 @@ def bulk_insert(skip_commit, tables, offset, conn, C, snapshot, VCF, ANN, LOF, u
     )
     pipe.seek(0)
     print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
-    C.copy_from(pipe, tables['t_meta'])
+    C.copy_expert(f"COPY {tables['t_meta']} FROM STDIN", pipe)
     pipe.close()
 
     if not skip_commit:
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     proc_lof = lambda x: x['LOF'].split(',') if 'LOF' in x else None
     before_per = lambda x: x.split('/')[0] if '/' in x else None
     after_per = lambda x: x.split('/')[1] if '/' in x else None
-    qual = lambda x: None if (x is None) or (x == '.') else int(x)
+    qual = lambda x: None if (x is None) or (x == '.') or (x == '') or (x == 'None') else x
     na = lambda x: None if x == '' else x
 
     dp4_labels = [
@@ -193,7 +193,7 @@ if __name__ == '__main__':
         ts.append( now.isoformat() )
         runid = extract_ena_run(ti.name)
         ena_run.append( runid )
-        #print ("{0} start to process {1}, ena_run {2}".format(now, ti.name, runid))
+        print ("{0} start to process {1}, ena_run {2}".format(now, ti.name, runid))
     
         buf = T.extractfile(ti)
         try:
@@ -240,6 +240,7 @@ if __name__ == '__main__':
         vcf['hrun'] = info_dict_seq.apply(lambda x: x.get('HRUN'))
         vcf['ann_num'] = ann_seq.apply(len)
         vcf['qual'] = vcf['QUAL'].apply(qual)
+        vcf['qual'] = vcf['qual'].astype(pandas.Int32Dtype())
         vcf.drop(columns = ['QUAL'], inplace = True)
 
         data = []
@@ -260,7 +261,7 @@ if __name__ == '__main__':
         ann.drop(columns = ['cdna_pos__cdna_length', 'cds_pos__cds_length', 'aa_pos__aa_length'], inplace = True)
         ann['transcript_biotype'] = ann['transcript_biotype'].apply(na)
         ann['rank_'] = ann['rank_'].apply(na)
-        #ann['distance'] = ann['distance'].apply(lambda x: int(x) if x else None)
+        ann['distance'] = ann['distance'].apply(lambda x: None if x == '' else x)
         ann['distance'] = ann['distance'].astype(pandas.Int32Dtype())
         
         data = []

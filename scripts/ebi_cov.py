@@ -15,7 +15,7 @@ def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
         pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
-    C.copy_from(pipe, tables['t_cov'])
+    C.copy_expert(f"COPY {tables['t_cov']} FROM STDIN", pipe)
     while len(COV):
         cov = COV.pop()
         del cov
@@ -34,7 +34,7 @@ def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
     )
     pipe.seek(0)
     print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
-    C.copy_from(pipe, tables['t_meta'])
+    C.copy_expert(f"COPY {tables['t_meta']} FROM STDIN", pipe)
     pipe.close()
 
     if not skip_commit:
