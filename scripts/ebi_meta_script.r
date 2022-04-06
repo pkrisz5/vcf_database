@@ -31,11 +31,14 @@ dd <- d1 %>%
   filter(run_accession%in%as.character(double_id$run_accession)) %>%
   filter(!is.na(checklist))
 d <- rbind(d, dd)
+rm(d1)
+
+print ("Duplicated ID removed")
 
 x <- d %>%
   mutate( yn = str_detect(country, pattern = ":")) %>%
   mutate(yn = ifelse(is.na(yn), "FALSE", yn))
-
+rm(d)
 xx1 <- filter(x, yn==TRUE) %>%
   mutate (clean_country = country)%>%
   separate(col = clean_country, into = c("clean_country", "del"), sep = ":") %>%
@@ -45,13 +48,14 @@ xx1 <- filter(x, yn==TRUE) %>%
 xx2 <- filter(x, yn!=TRUE) %>%
   mutate (clean_country = country)%>%
   select(- yn)
-
+rm(x)
 clean_meta <- rbind(xx1, xx2) %>%
   mutate(clean_host = host) %>%
   mutate(clean_host = ifelse(clean_host%in%c("homan", "homo sapiens", "Homo sapiens", "Homo Sapiens", "homosapiens", "Human", "sapiens") , "Homo sapiens", clean_host)) %>%
   select(run_accession, collection_date, clean_country, clean_host, everything()) %>%
   dplyr::rename(ena_run="run_accession") 
-
+rm(xx1, xx2)
+print("Start cleaning")
 clean_meta <- clean_meta %>%
   mutate(clean_collection_date = ifelse(str_count(collection_date_submitted)==10, collection_date, NA))
 
