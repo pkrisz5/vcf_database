@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: report
+  namespace: kooplex-veo
+spec:
+  podManagementPolicy: Parallel
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: app-report
+  serviceName: report
+  template:
+    metadata:
+      labels:
+        app: app-report
+    spec:
+      containers:
+      - env:
+        - name: LANG
+          value: en_US.UTF-8
+        - name: REPORT_NAME
+          value: helloworld
+        image: image-registry.vo.elte.hu/k8plex-report-shiny
+        imagePullPolicy: IfNotPresent
+        name: report
+        ports:
+        - containerPort: 3838
+          name: shinyreport
+          protocol: TCP
+        resources:
+          requests:
+            memory: "2G"
+          limits:
+            memory: "4G"
+        volumeMounts:
+        - mountPath: /srv/report/helloworld
+          name: pv
+          readOnly: true
+          subPath: repo/app/helloworld
+        - mountPath: /srv/report/report-1
+          name: pv
+          readOnly: true
+          subPath: repo/app/report-1
+        - mountPath: /srv/report/sandbox
+          name: pv
+          readOnly: true
+          subPath: repo/app/sandbox
+      restartPolicy: Always
+      volumes:
+      - name: pv
+        persistentVolumeClaim:
+          claimName: pvc-raw-ssd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: report
+  namespace: kooplex-veo
+spec:
+  selector:
+    app: app-report
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3838
+      targetPort: 3838
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: report
+  namespace: kooplex-veo
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+  - hosts:
+     - coveo.vo.elte.hu
+    secretName: tls-ena
+  rules:
+  - host: coveo.vo.elte.hu
+    http:
+      paths:
+      - path: /report
+        pathType: Prefix
+        backend:
+          serviceName: report
+          servicePort: 3838
