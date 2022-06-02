@@ -39,7 +39,13 @@ if __name__ == '__main__':
         print ("{0} open tar file {1}".format(datetime.datetime.now(), fi))
 
         while True:
-            ti = T.next()
+            try:
+                ti = T.next()
+            except Exception as e:
+                print ("{0} EE {1}".format(datetime.datetime.now(), e))
+                T.close()
+                break
+
             if ti is None:
                 T.close()
                 print ("{0} loop ends closed tarfile".format(datetime.datetime.now()))
@@ -56,6 +62,8 @@ if __name__ == '__main__':
             buf = T.extractfile(ti)
             try:
                 To.addfile(ti, buf)
+            except Exception as e:
+                print ("{0} EE {1} -- {2}".format(datetime.datetime.now(), e, ti.name))
             finally:
                 buf.close()
                 pass
