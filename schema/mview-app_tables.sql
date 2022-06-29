@@ -68,6 +68,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_new_cases AS
     , tmp_grouped as (
         SELECT "country_name", "date_year", "date_week", COUNT(*) AS "weekly_sample"
         FROM tmp_meta1
+        WHERE country_name IS NOT NULL
         GROUP BY "country_name", "date_year", "date_week"
     )
     SELECT "LHS"."country_name" AS "country_name", "LHS"."date_year" AS "date_year", "LHS"."date_week" AS "date_week", "LHS"."weekly_sample" AS "weekly_sample", "RHS"."iso_a3" AS "iso_a3", "RHS"."iso_a2" AS "iso_a2", "RHS"."country_name_local" AS "country_name_local", "RHS"."population" AS "population", "RHS"."ecdc_covid_country_weekly_cases" AS "ecdc_covid_country_weekly_cases", "RHS"."ecdc_covid_country_weekly_deaths" AS "ecdc_covid_country_weekly_deaths"
@@ -94,6 +95,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS app_variants_weekly AS
     )
     SELECT "country_name", "date_year", "date_week", "variant_id", COUNT(*) AS "weekly_variant_sample"
     FROM tmp_joined
+    WHERE country_name IS NOT NULL
     GROUP BY "country_name", "date_year", "date_week", "variant_id";
 -------------------------------------------------------------------
 
