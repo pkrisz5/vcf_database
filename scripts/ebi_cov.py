@@ -6,8 +6,43 @@ import pandas
 import psycopg2
 import datetime
 
+class Map:
+    def __init__(self, conn, cursor, table):
+        self.t = table
+        self.cursor = cursor
+        self.from_db = pandas.read_sql("SELECT id, ena_run FROM {}".format(table), con = conn)
+        map_size = self.from_db.shape[0]
+        largest_id = 0 if map_size == 0 else self.from_db['id'].max()
+        print ("{0} #{1} ena_run items in db, largest id={2}".format(datetime.datetime.now(), map_size, largest_id))
+        self.largest_id = largest_id + 1
+        self.new = {}
 
-def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
+    def get_id(self, ena_run):
+        p = self.from_db['ena_run'] == ena_run
+        if sum(p) == 0:
+            if not ena_run in self.new:
+                self.new[ena_run] = self.largest_id
+                self.largest_id += 1
+            return self.new[ena_run]
+        elif sum(p) == 1:
+            return self.from_db[p]['id'].values[0]
+
+    def insert(self):
+        cnt = len(self.new)
+        if cnt == 0:
+            return
+        pipe = io.StringIO()
+        n = pandas.DataFrame(self.new.items(), columns = ['ena_run', 'id'])
+        n[['id', 'ena_run']].to_csv(
+            pipe, sep = '\t', header = False, index = False
+        )
+        pipe.seek(0)
+        self.cursor.copy_expert(f"COPY {self.t} FROM STDIN", pipe)
+        self.from_db = pandas.concat([self.from_db, n])
+        self.new = {}
+        print ("{0} #{1} new ena_run items inserted".format(datetime.datetime.now(), cnt))
+
+def bulk_insert(tables, conn, C, snapshot, COV, uniq, cnt):
     COVC = pandas.concat(COV)
     print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
     pipe = io.StringIO()
@@ -29,17 +64,13 @@ def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
     )
     status['snapshot'] = snapshot
         
-    status[['timestamp', 'snapshot', 'ena_run', 'integrity']].to_csv(
+    status[['ena_run', 'timestamp', 'snapshot', 'integrity']].to_csv(
         pipe, sep = '\t', header = False, index = False
     )
     pipe.seek(0)
     print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
-    C.copy_expert(f"COPY {tables['t_meta']} FROM STDIN", pipe)
+    C.copy_expert(f"COPY {tables['t_unique']} FROM STDIN", pipe)
     pipe.close()
-
-    if not skip_commit:
-        conn.commit()
-    del pipe
 
 
 if __name__ == '__main__':
@@ -60,6 +91,8 @@ if __name__ == '__main__':
                      help = "database user", default = os.getenv('SECRET_USERNAME'))
     parser.add_argument("-p", "--password", action = "store",
                      help = "database password", default = os.getenv('SECRET_PASSWORD'))
+    parser.add_argument("-r", "--runid_table_name", action = "store",
+                     help = "the ena run_id map table", default = 'runid')
     parser.add_argument("-f", "--filter_coverage_upper_threshold", action = "store",
                      help = "keep only those positions where the coverage value is below the threshold", default = 100)
     parser.add_argument("-b", "--batch_size", action = "store",
@@ -77,8 +110,9 @@ if __name__ == '__main__':
 
 
     tables = {
+        't_runid': "{}.{}".format(args.schema, args.runid_table_name),
         't_cov': "{}.{}".format(args.schema, args.cov_table_name),
-        't_meta': "{}.{}".format(args.schema, args.covunique_table_name),
+        't_unique': "{}.{}".format(args.schema, args.covunique_table_name),
     }
 
     conn = psycopg2.connect(
@@ -92,6 +126,8 @@ if __name__ == '__main__':
     print ("{0} connected to db engine to use db {1}".format(datetime.datetime.now(), args.database))
 
     snapshot = args.snapshot if args.snapshot else extract_ena_run(args.input)
+
+    the_map = Map(conn, C, tables['t_runid'])
 
     T = tarfile.open(args.input)
     print ("{0} open tar file {1}, snapshot: {2}".format(datetime.datetime.now(), args.input, snapshot))
@@ -114,7 +150,7 @@ if __name__ == '__main__':
         counter += 1
         now = datetime.datetime.now()
         ts.append( now.isoformat() )
-        runid = extract_ena_run(ti.name)
+        runid = the_map.get_id( extract_ena_run(ti.name) )
         ena_run.append( runid )
         #print ("{0} start to process {1}, ena_run {2}".format(now, ti.name, runid))
     
@@ -155,8 +191,9 @@ if __name__ == '__main__':
         COV.append(cov)
 
         if counter == args.batch_size:
+            the_map.insert()
             uniq = zip(ts, ena_run, integrity)
-            bulk_insert(args.commit_when_finished, tables, conn, C, snapshot, COV, uniq, counter)
+            bulk_insert(tables, conn, C, snapshot, COV, uniq, counter)
             counter = 0
             COV = []
             ts = []
@@ -164,12 +201,11 @@ if __name__ == '__main__':
             integrity = []
     
     if counter:
+        the_map.insert()
         uniq = zip(ts, ena_run, integrity)
-        bulk_insert(args.commit_when_finished, tables, conn, C, snapshot, COV, uniq, counter)
+        bulk_insert(tables, conn, C, snapshot, COV, uniq, counter)
 
-    if args.commit_when_finished:
-        conn.commit()
-
+    conn.commit()
     
     C.close()
     conn.close()
