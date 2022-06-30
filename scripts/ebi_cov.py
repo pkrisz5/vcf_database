@@ -5,42 +5,7 @@ import tarfile
 import pandas
 import psycopg2
 import datetime
-
-class Map:
-    def __init__(self, conn, cursor, table):
-        self.t = table
-        self.cursor = cursor
-        self.from_db = pandas.read_sql("SELECT id, ena_run FROM {}".format(table), con = conn)
-        map_size = self.from_db.shape[0]
-        largest_id = 0 if map_size == 0 else self.from_db['id'].max()
-        print ("{0} #{1} ena_run items in db, largest id={2}".format(datetime.datetime.now(), map_size, largest_id))
-        self.largest_id = largest_id + 1
-        self.new = {}
-
-    def get_id(self, ena_run):
-        p = self.from_db['ena_run'] == ena_run
-        if sum(p) == 0:
-            if not ena_run in self.new:
-                self.new[ena_run] = self.largest_id
-                self.largest_id += 1
-            return self.new[ena_run]
-        elif sum(p) == 1:
-            return self.from_db[p]['id'].values[0]
-
-    def insert(self):
-        cnt = len(self.new)
-        if cnt == 0:
-            return
-        pipe = io.StringIO()
-        n = pandas.DataFrame(self.new.items(), columns = ['ena_run', 'id'])
-        n[['id', 'ena_run']].to_csv(
-            pipe, sep = '\t', header = False, index = False
-        )
-        pipe.seek(0)
-        self.cursor.copy_expert(f"COPY {self.t} FROM STDIN", pipe)
-        self.from_db = pandas.concat([self.from_db, n])
-        self.new = {}
-        print ("{0} #{1} new ena_run items inserted".format(datetime.datetime.now(), cnt))
+from common import Map, uniq
 
 def bulk_insert(tables, conn, C, snapshot, COV, uniq, cnt):
     COVC = pandas.concat(COV)
@@ -128,6 +93,7 @@ if __name__ == '__main__':
     snapshot = args.snapshot if args.snapshot else extract_ena_run(args.input)
 
     the_map = Map(conn, C, tables['t_runid'])
+    uniq_before = uniq(conn, tables['t_unique'])
 
     T = tarfile.open(args.input)
     print ("{0} open tar file {1}, snapshot: {2}".format(datetime.datetime.now(), args.input, snapshot))
@@ -147,10 +113,14 @@ if __name__ == '__main__':
         if not ti.isfile():
             continue
 
-        counter += 1
         now = datetime.datetime.now()
-        ts.append( now.isoformat() )
         runid = the_map.get_id( extract_ena_run(ti.name) )
+        if runid in uniq_before:
+            print ("{0} DUPLICATE file name {1} -> ena_run {2} is not new".format(now, ti.name, runid))
+            continue
+
+        counter += 1
+        ts.append( now.isoformat() )
         ena_run.append( runid )
         #print ("{0} start to process {1}, ena_run {2}".format(now, ti.name, runid))
     
