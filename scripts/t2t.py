@@ -35,8 +35,12 @@ if __name__ == '__main__':
                 files.extend(map(lambda x: os.path.join(R, x), fs))
 
     for fi in files:
-        T = tarfile.open(fi)
-        print ("{0} open tar file {1}".format(datetime.datetime.now(), fi))
+        try:
+            T = tarfile.open(fi)
+            print ("{0} open tar file {1}".format(datetime.datetime.now(), fi))
+        except Exception as e:
+            print ("{0} EE opening {1} {2}".format(datetime.datetime.now(), fi, e))
+            continue
 
         while True:
             try:
