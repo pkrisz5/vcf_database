@@ -5,7 +5,6 @@ import tarfile
 import pandas
 import psycopg2
 import datetime
-#import numpy
 import gzip
 
 if __name__ == '__main__':
@@ -28,11 +27,11 @@ if __name__ == '__main__':
     Tc = tarfile.open(os.path.join(args.output_coverage, snapshot + "_coverage.tar.gz"), "w:gz")
     Tv = tarfile.open(os.path.join(args.output_vcf, snapshot + "_vcf.tar.gz"), "w:gz")
 
-    files = []
+    files = set()
     for r, ds, _ in os.walk(args.input):
         for d in ds:
             for R, _, fs in os.walk(os.path.join(r, d)):
-                files.extend(map(lambda x: os.path.join(R, x), fs))
+                files.update(map(lambda x: os.path.join(R, x), fs))
 
     for fi in files:
         try:
@@ -56,16 +55,30 @@ if __name__ == '__main__':
                 break
             if not ti.isfile():
                 continue
+            is_zipped = True
             if ti.name.endswith('.coverage.gz'):
                 To = Tc
             elif ti.name.endswith('.annot.vcf.gz'):
                 To = Tv
+            elif ti.name.endswith('.coverage'):
+                To = Tc
+                is_zipped = False
+            elif ti.name.endswith('.annot.vcf'):
+                To = Tv
+                is_zipped = False
             else:
                 continue
 
+            print ("{0} found {1}".format(datetime.datetime.now(), ti.name))
             buf = T.extractfile(ti)
             try:
+                if not is_zipped:
+                    ti = tarfile.TarInfo(name = ti.name + '.gz')
+                    raw = gzip.compress(buf.read())
+                    buf = io.BytesIO(raw)
+                    ti.size = len(raw)
                 To.addfile(ti, buf)
+                print ("{0} added {1}".format(datetime.datetime.now(), ti.name))
             except Exception as e:
                 print ("{0} EE {1} -- {2}".format(datetime.datetime.now(), e, ti.name))
             finally:
