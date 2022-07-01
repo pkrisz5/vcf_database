@@ -41,6 +41,7 @@ if __name__ == '__main__':
             print ("{0} EE opening {1} {2}".format(datetime.datetime.now(), fi, e))
             continue
 
+        found_mask = 0b00
         while True:
             try:
                 ti = T.next()
@@ -57,17 +58,26 @@ if __name__ == '__main__':
                 continue
             is_zipped = True
             if ti.name.endswith('.coverage.gz'):
+                this = 0b01
                 To = Tc
             elif ti.name.endswith('.annot.vcf.gz'):
+                this = 0b10
                 To = Tv
             elif ti.name.endswith('.coverage'):
+                this = 0b01
                 To = Tc
                 is_zipped = False
             elif ti.name.endswith('.annot.vcf'):
+                this = 0b10
                 To = Tv
                 is_zipped = False
             else:
                 continue
+
+            if found_mask & this:
+                print ("{0} skipping {1}, coz former instance already found".format(datetime.datetime.now(), ti.name))
+                continue
+            found_mask |= this
 
             print ("{0} found {1}".format(datetime.datetime.now(), ti.name))
             buf = T.extractfile(ti)
