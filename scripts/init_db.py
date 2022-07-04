@@ -475,7 +475,7 @@ def populate_tables(args):
 
     #pcr primer
     t_pcr = pandas.read_csv(datafile('pcr_primers.tsv'), sep = '\t')
-    db_country = pandas.read_sql(f'SELECT * FROM {schema}.country', con = conn).astype({'id': pandas.Int64Dtype()})
+    db_country = pandas.read_sql(f'SELECT * FROM {schema}.country', con = c).astype({'id': pandas.Int64Dtype()})
     db_country[db_country['iso_a3'] == 'USA']
     t_pcr['country'] = t_pcr['country'].apply(lambda x: 'United States' if x == 'USA' else x)
     K = list(t_pcr.columns)
