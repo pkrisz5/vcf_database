@@ -354,15 +354,15 @@ CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
 --    quality_status                     {schema}.type_quality
 --);
 
-CREATE FUNCTION {schema}.lookup_annotation(key INTEGER, gene_name {schema}.type_genename) RETURNS VARCHAR(128)
-    LANGUAGE SQL
-    IMMUTABLE
-    RETURNS NULL ON NULL INPUT
-    RETURN CONCAT_WS('&', (
-      SELECT CAST(annotation_atom AS VARCHAR(64))
-        FROM {schema}.annotation_binding
-        WHERE key = key AND gene_name = gene_name
-        ));
+--FIXME:: CREATE FUNCTION {schema}.lookup_annotation(key INTEGER, gene_name {schema}.type_genename) RETURNS VARCHAR(128)
+--FIXME::     LANGUAGE SQL
+--FIXME::     IMMUTABLE
+--FIXME::     RETURNS NULL ON NULL INPUT
+--FIXME::     RETURN CONCAT_WS('&', (
+--FIXME::       SELECT CAST(annotation_atom AS VARCHAR(64))
+--FIXME::         FROM {schema}.annotation_binding
+--FIXME::         WHERE key = key AND gene_name = gene_name
+--FIXME::         ));
 
     """.format(
         schema = schema,
