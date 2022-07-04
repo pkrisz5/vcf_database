@@ -566,8 +566,8 @@ def grant_role(args):
     sql = """
 {create_ro}
 {create_rw}
-GRANT CONNECT ON DATABASE {args.database} TO {role_ro};
-GRANT CONNECT ON DATABASE {args.database} TO {role_rw};
+GRANT CONNECT ON DATABASE {database} TO {role_ro};
+GRANT CONNECT ON DATABASE {database} TO {role_rw};
 GRANT CREATE ON SCHEMA {schema} TO {role_rw};
 GRANT USAGE ON SCHEMA {schema} TO {role_ro};
 ALTER ROLE {role_ro} SET search_path={schema};
@@ -577,6 +577,7 @@ ALTER DEFAULT PRIVILEGES FOR USER {role_rw} IN SCHEMA {schema} GRANT SELECT ON T
     """.format(
         role_ro = args.role_ro,
         role_rw = args.role_rw,
+        databae = args.database,
         create_ro = create_role(args.role_ro, args.role_ro_pw),
         create_rw = create_role(args.role_rw, args.role_rw_pw),
         schema = args.schema,
