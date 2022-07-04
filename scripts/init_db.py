@@ -577,7 +577,7 @@ ALTER DEFAULT PRIVILEGES FOR USER {role_rw} IN SCHEMA {schema} GRANT SELECT ON T
     """.format(
         role_ro = args.role_ro,
         role_rw = args.role_rw,
-        databae = args.database,
+        database = args.database,
         create_ro = create_role(args.role_ro, args.role_ro_pw),
         create_rw = create_role(args.role_rw, args.role_rw_pw),
         schema = args.schema,
