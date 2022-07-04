@@ -14,6 +14,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 import re
 import os
+import io
 import sys
 import datetime
 import argparse
