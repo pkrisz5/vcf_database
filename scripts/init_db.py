@@ -373,7 +373,7 @@ CREATE FUNCTION {schema}.lookup_annotation(key INTEGER, gene_name {schema}.type_
 
 @subcommand([argument("-S", "--schema", action="store", help="schema name", default=os.getenv('DB_SCHEMA', 'ebi'))])
 def drop_schema(args):
-    sql = "DROP SCHEMA {}".format(args.schema)
+    sql = "DROP SCHEMA {} CASCADE".format(args.schema)
     exec_commit(args, sql)
 
 
