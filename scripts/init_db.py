@@ -354,13 +354,13 @@ CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
 --    quality_status                     {schema}.type_quality
 --);
 
-CREATE FUNCTION {schema}.lookup_annotation(key INTEGER, gene_name ebi.type_genename) RETURNS VARCHAR(128)
+CREATE FUNCTION {schema}.lookup_annotation(key INTEGER, gene_name {schema}.type_genename) RETURNS VARCHAR(128)
     LANGUAGE SQL
     IMMUTABLE
     RETURNS NULL ON NULL INPUT
     RETURN CONCAT_WS('&', (
       SELECT CAST(annotation_atom AS VARCHAR(64))
-        FROM ebi.annotation_binding
+        FROM {schema}.annotation_binding
         WHERE key = key AND gene_name = gene_name
         ));
 
