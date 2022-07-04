@@ -523,6 +523,47 @@ def populate_tables(args):
     C.close()
     c.close()
 
+def create_role(role, password):
+    return f"""
+DO
+$do$
+BEGIN
+   IF NOT EXISTS (
+      SELECT FROM pg_catalog.pg_roles
+      WHERE  rolname = '{role}') THEN
+
+      CREATE ROLE {role} LOGIN PASSWORD '{password}' NOINHERIT;
+   END IF;
+END
+$do$;
+"""
+
+@subcommand([
+    argument("-S", "--schema", action="store", help="schema name", required=True),
+    argument("-R", "--role_ro", action="store", help="read only role", required=True),
+    argument("-W", "--role_rw", action="store", help="read/write role", required=True),
+    argument("-r", "--role_ro_pw", action="store_true", help="read only role's password"),
+    argument("-w", "--role_rw_pw", action="store_true", help="read/write role's password"),
+])
+def grant_role(args):
+    sql = """
+{create_ro}
+{create_rw}
+GRANT CREATE ON SCHEMA {schema} TO {role_rw};
+GRANT USAGE ON SCHEMA {schema} TO {role_ro};
+ALTER ROLE {role_ro} SET search_path={schema};
+ALTER ROLE {role_rw} SET search_path={schema};
+ALTER DEFAULT PRIVILEGES FOR USER {role_rw} IN SCHEMA {schema} GRANT ALL PRIVILEGES ON TABLES TO {role_rw};
+ALTER DEFAULT PRIVILEGES FOR USER {role_rw} IN SCHEMA {schema} GRANT SELECT ON TABLES TO {role_ro};
+    """.format(
+        role_ro = args.role_ro,
+        role_rw = args.role_rw,
+        create_ro = create_role(args.role_ro, args.role_ro_pw),
+        create_rw = create_role(args.role_rw, args.role_rw_pw),
+        schema = args.schema,
+    )
+    exec_commit(sql)
+
 
 if __name__ == "__main__":
     args = cli.parse_args()
@@ -531,15 +572,4 @@ if __name__ == "__main__":
     else:
         args.func(args)
 
-
-
-## ## GRANT USAGE ON SCHEMA {schema} TO data_loader;
-## ## GRANT USAGE ON SCHEMA {schema} TO data_reader;
-## ## 
-## ## GRANT CREATE ON SCHEMA {schema} TO data_loader;
-## ## 
-## ## ALTER DEFAULT PRIVILEGES FOR USER data_loader IN SCHEMA {schema} GRANT ALL PRIVILEGES ON TABLES TO data_loader;
-## ## ALTER DEFAULT PRIVILEGES FOR USER data_loader IN SCHEMA {schema} GRANT SELECT ON TABLES TO data_reader;
-## ## 
-## ## ALTER ROLE data_reader SET search_path={schema};
 
