@@ -94,6 +94,15 @@ def drop_database(args):
 
 @subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
 def create_schema(args):
+    sql = f"""
+CREATE SCHEMA {args.schema};
+REVOKE ALL ON SCHEMA {args.schema} FROM PUBLIC;
+    """
+    exec_commit(args, sql)
+
+
+@subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
+def populate_schema_structure(args):
     schema = args.schema
     def _r(fn, t):
         with open(datafile(fn)) as f:
@@ -107,9 +116,6 @@ def create_schema(args):
     }
 
     sql = """
-CREATE SCHEMA {schema};
-REVOKE ALL ON SCHEMA {schema} FROM PUBLIC;
-
 CREATE TYPE {schema}.type_sex AS ENUM ('male', 'female');
 CREATE TYPE {schema}.type_layout AS ENUM ('single', 'paired');
 CREATE TYPE {schema}.type_status AS ENUM ('active surveillance in response to outbreak', 'active surveillance not initiated by an outbreak', 'other');
@@ -523,6 +529,7 @@ def populate_tables(args):
     C.close()
     c.close()
 
+
 def create_role(role, password):
     return f"""
 DO
@@ -537,6 +544,16 @@ BEGIN
 END
 $do$;
 """
+
+
+@subcommand([ argument("-R", "--role", action="store", help="role to drop", required=True) ])
+def drop_role(args):
+    sql = f"""
+DROP OWNED BY {args.role};
+DROP ROLE {args.role};
+    """
+    exec_commit(args, sql)
+
 
 @subcommand([
     argument("-S", "--schema", action="store", help="schema name", required=True),
@@ -562,7 +579,7 @@ ALTER DEFAULT PRIVILEGES FOR USER {role_rw} IN SCHEMA {schema} GRANT SELECT ON T
         create_rw = create_role(args.role_rw, args.role_rw_pw),
         schema = args.schema,
     )
-    exec_commit(sql)
+    exec_commit(args, sql)
 
 
 if __name__ == "__main__":
