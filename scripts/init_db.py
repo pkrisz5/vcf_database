@@ -373,13 +373,13 @@ CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
     exec_commit(args, sql)
 
 
-@subcommand([argument("-S", "--schema", action="store", help="schema name", default=os.getenv('DB_SCHEMA', 'ebi'))])
+@subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
 def drop_schema(args):
     sql = "DROP SCHEMA {} CASCADE".format(args.schema)
     exec_commit(args, sql)
 
 
-@subcommand([argument("-S", "--schema", action="store", help="schema name", default=os.getenv('DB_SCHEMA', 'ebi'))])
+@subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
 def populate_tables(args):
     c = psycopg2.connect(
         host = args.server,
@@ -542,8 +542,8 @@ $do$;
     argument("-S", "--schema", action="store", help="schema name", required=True),
     argument("-R", "--role_ro", action="store", help="read only role", required=True),
     argument("-W", "--role_rw", action="store", help="read/write role", required=True),
-    argument("-r", "--role_ro_pw", action="store_true", help="read only role's password"),
-    argument("-w", "--role_rw_pw", action="store_true", help="read/write role's password"),
+    argument("-r", "--role_ro_pw", action="store", help="read only role's password"),
+    argument("-w", "--role_rw_pw", action="store", help="read/write role's password"),
 ])
 def grant_role(args):
     sql = """
