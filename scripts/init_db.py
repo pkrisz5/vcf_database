@@ -389,6 +389,7 @@ def populate_tables(args):
         database = args.database,
     )
     C = c.cursor()
+    schema = args.schema
 
     # country
     country = pandas.read_csv(datafile('country_iso.tsv'), sep = '\t')
