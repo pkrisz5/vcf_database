@@ -566,6 +566,8 @@ def grant_role(args):
     sql = """
 {create_ro}
 {create_rw}
+GRANT CONNECT ON DATABASE {args.database} TO {role_ro};
+GRANT CONNECT ON DATABASE {args.database} TO {role_rw};
 GRANT CREATE ON SCHEMA {schema} TO {role_rw};
 GRANT USAGE ON SCHEMA {schema} TO {role_ro};
 ALTER ROLE {role_ro} SET search_path={schema};
