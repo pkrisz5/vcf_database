@@ -120,7 +120,7 @@ CREATE TYPE {schema}.type_sex AS ENUM ('male', 'female');
 CREATE TYPE {schema}.type_layout AS ENUM ('single', 'paired');
 CREATE TYPE {schema}.type_status AS ENUM ('active surveillance in response to outbreak', 'active surveillance not initiated by an outbreak', 'other');
 CREATE TYPE {schema}.type_integrity AS ENUM ('ok', 'empty file', 'corrupt file');
-CREATE TYPE {schema}.type_nmd AS ENUM ('(ORF1ab|GU280_gp01|1|1.00)');
+CREATE TYPE {schema}.type_nmd AS ENUM ('(ORF1ab|GU280_gp01|1|1.00)', '(ORF1ab|GU280_gp01|28|0.04)');
 CREATE TYPE {schema}.type_featuretype AS ENUM ('intergenic_region', 'transcript', 'gene_variant');
 CREATE TYPE {schema}.type_rank AS ENUM ('1/1', '2/2', '1/2');
 CREATE TYPE {schema}.type_transcriptbiotype AS ENUM ('protein_coding');
