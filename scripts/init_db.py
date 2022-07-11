@@ -263,7 +263,7 @@ CREATE TABLE IF NOT EXISTS {schema}.gene_id (
         gene_name           {schema}.type_genename NOT NULL
 );
 CREATE TABLE IF NOT EXISTS {schema}.vcf_lof (
-    key                         INT PRIMARY KEY REFERENCES {schema}.vcf_key(key),
+    key                         INT REFERENCES {schema}.vcf_key(key),
     lof                         {schema}.type_lof
 );
 CREATE TABLE IF NOT EXISTS {schema}.lineage_def (
