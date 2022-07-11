@@ -8,20 +8,6 @@ import datetime
 from common import Map, uniq
 
 def bulk_insert(tables, conn, C, snapshot, COV, uniq, cnt):
-    COVC = pandas.concat(COV)
-    print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
-    pipe = io.StringIO()
-    COVC[['ena_run', 'id', 'coverage']].to_csv(
-        pipe, sep = '\t', header = False, index = False
-    )
-    pipe.seek(0)
-    C.copy_expert(f"COPY {tables['t_cov']} FROM STDIN", pipe)
-    while len(COV):
-        cov = COV.pop()
-        del cov
-    del COVC
-    pipe.close()
-
     pipe = io.StringIO()
     status = pandas.DataFrame(
         columns = ('timestamp', 'ena_run', 'integrity'),
@@ -35,6 +21,20 @@ def bulk_insert(tables, conn, C, snapshot, COV, uniq, cnt):
     pipe.seek(0)
     print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
     C.copy_expert(f"COPY {tables['t_unique']} FROM STDIN", pipe)
+    pipe.close()
+
+    COVC = pandas.concat(COV)
+    print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
+    pipe = io.StringIO()
+    COVC[['ena_run', 'id', 'coverage']].to_csv(
+        pipe, sep = '\t', header = False, index = False
+    )
+    pipe.seek(0)
+    C.copy_expert(f"COPY {tables['t_cov']} FROM STDIN", pipe)
+    while len(COV):
+        cov = COV.pop()
+        del cov
+    del COVC
     pipe.close()
 
 
@@ -66,8 +66,6 @@ if __name__ == '__main__':
                      help = "the name of the target coverage table in the database", default = 'cov')
     parser.add_argument("-m", "--covunique_table_name", action = "store",
                      help = "the name of the target cov unique table in the database", default = 'unique_cov')
-    parser.add_argument("-F", "--commit_when_finished", action = "store_true",
-                     help = "commit transaction only in the very end")
     args = parser.parse_args()
 
     assert os.path.exists(args.input), "File not found error: {0}".format(args.input)
