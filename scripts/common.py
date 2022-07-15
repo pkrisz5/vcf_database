@@ -28,6 +28,24 @@ class Map:
         else:
             print ("ena_run: {0} not found in table {1}".format(ena_run, self.t))
 
+    def get_ids(self, ena_run_series, auto_add = True):
+        run_id_map = pandas.merge(
+            left = pandas.DataFrame(ena_run_series), right = self.from_db,
+            left_on = 'run_accession', right_on = 'ena_run',
+            how = 'left'
+        )
+        na =run_id_map['ena_run'].isna()
+        runid_new = run_id_map[na].reset_index()
+        sz = runid_new.shape[0]
+        if sz > 0 and autoadd:
+            runid_new['id'] = runid_new.index + self.largest_id
+            runid_new.drop(columns=['index', 'ena_run'], inplace=True)
+            runid_new.rename(columns={'run_accession': 'ena_run'}, inplace=True)
+            self.new.update(dict(zip(runid_new['ena_run'], runid_new['id'])))
+            self.largest_id += sz
+        return pandas.concat([runid_new[['ena_run', 'id']].copy(), run_id_map[~na][['ena_run', 'id']].copy()])
+
+
     def insert(self):
         cnt = len(self.new)
         if cnt == 0:
