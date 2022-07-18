@@ -67,6 +67,16 @@ def uniq(conn, table):
     return v
 
 
+def bulk_insert(table, conn, C, db_table):
+    pipe = io.StringIO()
+    table.to_csv(
+        pipe, sep = '\t', header = False, index = False
+    )
+    pipe.seek(0)
+    C.copy_expert(f"COPY {db_table} FROM STDIN WITH (format csv, delimiter '\t')", pipe)
+    pipe.close()
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-H", "--server", action = "store",

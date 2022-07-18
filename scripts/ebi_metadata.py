@@ -5,17 +5,7 @@ import tarfile
 import pandas
 import psycopg2
 import datetime
-from common import Map
-
-def bulk_insert(table, conn, C, db_table):
-    pipe = io.StringIO()
-    table.to_csv(
-        pipe, sep = '\t', header = False, index = False
-    )
-    pipe.seek(0)
-    C.copy_expert(f"COPY {db_table} FROM STDIN WITH (format csv, delimiter '\t')", pipe)
-    pipe.close()
-
+from common import Map, bulk_insert
 
 
 if __name__ == '__main__':
