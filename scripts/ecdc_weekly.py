@@ -51,7 +51,7 @@ if __name__ == '__main__':
     print ("{0} connected to db engine to use db {1}".format(datetime.datetime.now(), args.database))
 
     # lookup
-    country = pandas.read_sql("SELECT id, iso_a3 FROM ebi_.country", con = conn)
+    country = pandas.read_sql(f"SELECT id, iso_a3 FROM {tables['t_country']}", con = conn)
 
     dataset = pandas.merge(
         left = ecdc[['country_code', 'population', 'indicator', 'weekly_count', 'year', 'week']],
