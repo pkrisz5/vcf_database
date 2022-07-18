@@ -37,7 +37,7 @@ class Map:
         na =run_id_map['ena_run'].isna()
         runid_new = run_id_map[na].reset_index()
         sz = runid_new.shape[0]
-        if sz > 0 and autoadd:
+        if sz > 0 and auto_add:
             runid_new['id'] = runid_new.index + self.largest_id
             runid_new.drop(columns=['index', 'ena_run'], inplace=True)
             runid_new.rename(columns={'run_accession': 'ena_run'}, inplace=True)
