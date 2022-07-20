@@ -138,7 +138,15 @@ if __name__ == '__main__':
     metadata['collection_date_valid'] = ~ d_none
     jan1idx = metadata.loc[~ d_none].loc[jan1].index 
     metadata.loc[jan1idx, 'collection_date_valid'] = jan1_match
-    metadata['country'] = metadata['country'].apply(lambda x: None if pandas.isna(x) else x.split(':')[0])
+    country_map = {
+        'Czech Republic': 'Czechia',
+        'Myanmar': 'Myanmar/Burma',
+        'Russia': 'Russian Federation',
+        'State of Palestine': 'Palestine',
+        'USA': 'United States'
+        }
+    xtr_map = lambda x: country_map[x] if x in country_map else x
+    metadata['country'] = metadata['country'].apply(lambda x: None if pandas.isna(x) else xtr_map(x.split(':')[0]))
     metadata = pandas.merge(
         left = metadata,  right = country_db,
         left_on = 'country', right_on = 'country_name',
@@ -167,6 +175,7 @@ if __name__ == '__main__':
             'accession', 'study_accession_x', 'experiment_accession_x'
         ]
         bulk_insert(metadata_join[m_new][K].astype({
+            'runid': pandas.Int64Dtype(),
             'country_id_x': pandas.Int64Dtype(),
         }), conn, C, tables['t_metadata'])
         metadata_db = pandas.read_sql(f"""
@@ -260,6 +269,7 @@ if __name__ == '__main__':
     extension['library_id'] = lib_id
     extension['collector_id'] = col_id
     extension = extension.astype({
+        'runid': pandas.Int64Dtype(),
         'collector_id': pandas.Int64Dtype(),
         'library_id': pandas.Int64Dtype(),
     })
