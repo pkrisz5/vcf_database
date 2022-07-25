@@ -132,12 +132,10 @@ if __name__ == '__main__':
     )
     metadata.rename(columns = {'id': 'runid'}, inplace = True)
     metadata.drop(columns = ['run_accession'], inplace = True)
-    d_none = metadata['collection_date'].isna()
-    jan1 = metadata[~ d_none]['collection_date'].apply(lambda x: x.endswith('-01-01'))
-    jan1_match = metadata[~ d_none][jan1][['collection_date', 'collection_date_submitted']].apply(lambda x: x[1].startswith(x[0]), axis = 1)
-    metadata['collection_date_valid'] = ~ d_none
-    jan1idx = metadata.loc[~ d_none].loc[jan1].index 
-    metadata.loc[jan1idx, 'collection_date_valid'] = jan1_match
+    d_ok = metadata['collection_date'].apply(lambda x: x.count('-') == 2)
+    ds_ok = metadata['collection_date_submitted'].apply(lambda x: x.count('-') == 2)
+    rel_ok = metadata[['collection_date', 'collection_date_submitted']].apply(lambda x: x[0] <= x[1])
+    metadata['collection_date_valid'] = d_ok & ds_ok & rel_ok
     country_map = {
         'Czech Republic': 'Czechia',
         'Myanmar': 'Myanmar/Burma',
