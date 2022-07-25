@@ -8,6 +8,15 @@ import datetime
 from common import Map, bulk_insert
 
 
+def valiDate(x):
+    cd, cds = x
+    if pandas.isna(cd) | pandas.isna(cds):
+        return False
+    if cd.count('-') != 2 and cds.count('-') != 2:
+        return False
+    return cd <= cds
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", action = "store",
@@ -132,10 +141,7 @@ if __name__ == '__main__':
     )
     metadata.rename(columns = {'id': 'runid'}, inplace = True)
     metadata.drop(columns = ['run_accession'], inplace = True)
-    d_ok = metadata['collection_date'].apply(lambda x: x.count('-') == 2)
-    ds_ok = metadata['collection_date_submitted'].apply(lambda x: x.count('-') == 2)
-    rel_ok = metadata[['collection_date', 'collection_date_submitted']].apply(lambda x: x[0] <= x[1])
-    metadata['collection_date_valid'] = d_ok & ds_ok & rel_ok
+    metadata['collection_date_valid'] = metadata[['collection_date', 'collection_date_submitted']].apply(valiDate, axis = 1)
     country_map = {
         'Czech Republic': 'Czechia',
         'Myanmar': 'Myanmar/Burma',
