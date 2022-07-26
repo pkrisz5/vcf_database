@@ -17,14 +17,14 @@ class Map:
         self.new = {}
 
     def get_id(self, ena_run, auto_add = True):
-        p = self.from_db['ena_run'] == ena_run
-        if sum(p) == 0 and auto_add:
+        p = self.from_db[self.from_db['ena_run'] == ena_run]
+        if p.empty and auto_add:
             if not ena_run in self.new:
                 self.new[ena_run] = self.largest_id
                 self.largest_id += 1
             return self.new[ena_run]
-        elif sum(p) == 1:
-            return self.from_db[p]['id'].values[0]
+        elif not p.empty:
+            return p['id'].values[0]
         else:
             print ("ena_run: {0} not found in table {1}".format(ena_run, self.t))
 
