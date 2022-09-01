@@ -322,7 +322,7 @@ CREATE TABLE IF NOT EXISTS {schema}.pcr_primers (
 CREATE TABLE IF NOT EXISTS {schema}.amino_acid_symbol (
     name                VARCHAR(16),
     symbol_3letter      CHAR(3),
-    symbol_2letter      CHAR(1)
+    symbol_1letter      CHAR(1)
 );
 CREATE TABLE IF NOT EXISTS {schema}.lamp_primers (
     target_gene                  VARCHAR(8), 
@@ -344,15 +344,12 @@ CREATE TABLE IF NOT EXISTS {schema}.lamp_primers (
     reference                    VARCHAR(32)
 );
 CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
-    iso_a3                            CHAR(3),
-    iso_a2                            CHAR(2),
     country_id                        INT REFERENCES {schema}.country(id) NULL,
-    country_name_local                TEXT,
     population                        INT,
     date_year                         INT,
     date_week                         INT,
-    ecdc_covid_country_weekly_cases   INT,
-    ecdc_covid_country_weekly_deaths  INT
+    cases                             INT,
+    deaths                            INT
 );
 -- FIXME: is it used somewhere?
 --CREATE TABLE IF NOT EXISTS {schema}.n_content (
@@ -362,21 +359,144 @@ CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
 --    quality_status                     {schema}.type_quality
 --);
 
---FIXME:: CREATE FUNCTION {schema}.lookup_annotation(key INTEGER, gene_name {schema}.type_genename) RETURNS VARCHAR(128)
---FIXME::     LANGUAGE SQL
---FIXME::     IMMUTABLE
---FIXME::     RETURNS NULL ON NULL INPUT
---FIXME::     RETURN CONCAT_WS('&', (
---FIXME::       SELECT CAST(annotation_atom AS VARCHAR(64))
---FIXME::         FROM {schema}.annotation_binding
---FIXME::         WHERE key = key AND gene_name = gene_name
---FIXME::         ));
-
     """.format(
         schema = schema,
         create_types = ';\n'.join([ _r(fn, t) for t, fn in types_many.items() ]),
     )
     exec_commit(args, sql)
+
+
+@subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
+def create_functions(args):
+    schema = args.schema
+    sql = f"""
+CREATE OR REPLACE FUNCTION {schema}.lookup_annotation(key integer, gene_name {schema}.type_genename)
+ RETURNS character varying
+ LANGUAGE sql
+ IMMUTABLE STRICT
+AS $function$
+    SELECT CONCAT_WS('&', (
+      SELECT CAST(annotation_atom AS VARCHAR(64))
+        FROM {schema}.annotation_binding
+        WHERE key = key AND gene_name = gene_name
+        ))
+       $function$
+;
+CREATE OR REPLACE FUNCTION {schema}.convert_list_aa(VARIADIC list text[])
+ RETURNS TABLE(hgvs_p character varying)
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    res text;
+    str text;
+BEGIN
+    FOREACH str IN ARRAY list
+    LOOP
+      SELECT convert_single_aa(str) INTO res;
+      hgvs_p := res;
+      RETURN NEXT;
+    END LOOP;
+END; $function$
+;
+CREATE OR REPLACE FUNCTION {schema}.convert_single_aa_list(VARIADIC list text[])
+ RETURNS text[]
+ LANGUAGE plpgsql
+AS $function$
+DECLARE 
+   results text[];
+   res text;
+   str text;
+BEGIN
+     FOREACH str IN ARRAY list
+     loop
+        select convert_single_aa(str) into res;
+        results := array_append(results, res);
+    end loop;
+    return results;
+END;
+$function$
+;
+CREATE OR REPLACE FUNCTION {schema}.convert_single_aa_list_test(VARIADIC list text[])
+ RETURNS TABLE(hgvs_p character varying)
+ LANGUAGE plpgsql
+AS $function$
+DECLARE
+    res text;
+    str text;
+BEGIN
+    FOREACH str IN ARRAY list
+    LOOP
+      SELECT convert_single_aa(str) INTO res;
+      hgvs_p := res;
+      RETURN NEXT;
+    END LOOP;
+END; $function$
+;
+CREATE OR REPLACE FUNCTION {schema}.convert_single_aa_protein_pairs_list(VARIADIC list text[])
+ RETURNS TABLE(gene_name text, hgvs_p text)
+ LANGUAGE plpgsql
+AS $function$
+DECLARE 
+    res text;
+    str text;
+    tmp text[];
+BEGIN
+    FOREACH str IN ARRAY list
+    LOOP
+      tmp := regexp_split_to_array(str, ':');
+      SELECT convert_single_aa(tmp[2]) INTO res;
+      hgvs_p := res;
+      gene_name := tmp[1];
+      RETURN NEXT;
+    END LOOP;
+END; $function$
+;
+CREATE OR REPLACE FUNCTION {schema}.convert_single_aa(character)
+ RETURNS character
+ LANGUAGE sql
+AS $function$
+    WITH aa_left_three AS (
+      SELECT symbol_3letter
+      FROM {schema}.amino_acid_symbol
+      WHERE symbol_1letter=(SELECT LEFT($1, 1) AS ExtractString)
+      )
+   , aa_right_three AS (
+      SELECT symbol_3letter
+      FROM {schema}.amino_acid_symbol
+      WHERE symbol_1letter=(SELECT RIGHT($1, 1) AS ExtractString)
+      )
+   , left_replaced AS (
+      SELECT REPLACE($1,
+              (SELECT LEFT($1, 1) AS ExtractString),
+              (SELECT CONCAT('p.',
+                            (SELECT * FROM aa_left_three)))))
+   SELECT REPLACE((SELECT * FROM left_replaced),
+              (SELECT RIGHT($1, 1) AS ExtractString),
+              (SELECT * FROM aa_right_three));
+$function$
+;
+CREATE OR REPLACE FUNCTION {schema}.host_human_id()
+ RETURNS INT
+ LANGUAGE plpgsql
+AS $function$
+DECLARE r INT;
+BEGIN
+ SELECT host.id INTO r
+   FROM {schema}.host
+   WHERE host.host::text = 'Homo sapiens'::text;
+ RETURN r;
+END; 
+$function$
+    """
+    exec_commit(args, sql)
+
+
+
+#FIXME: permissions:
+#GRANT EXECUTE ON FUNCTION datahub_0.host_human_id() TO public_reader;
+#FIXME:: view indexes
+#CREATE INDEX vcf_key_selected_idx_runid ON ebi_.vcf_key_selected USING btree (runid);
+#CREATE INDEX vcf_key_selected_key ON ebi_.vcf_key_selected USING btree (key);
 
 
 @subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
