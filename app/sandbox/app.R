@@ -15,7 +15,7 @@ library(shinyThings)
 library(jsTreeR) 
 library(shinybusy)
 
-app_version <- "v_003.005"
+app_version <- "v_003.006"
 
 # Connection details
 
@@ -270,10 +270,10 @@ ui <- dashboardPage(
             box(
               title = "",
               status = "primary",
-              height = "450", width = "12", solidHeader = FALSE,
+              height = "650", width = "12", solidHeader = FALSE,
               column(
                 width = 12,
-                highchartOutput("euPlot"),
+                highchartOutput("euPlot", height = "600px"),
               )
             )
           ),
@@ -324,10 +324,10 @@ ui <- dashboardPage(
             box(
               title = "",
               status = "primary",
-              height = "450", width = "12", solidHeader = FALSE,
+              height = "650", width = "12", solidHeader = FALSE,
               column(
                 width = 12,
-                highchartOutput("worldPlot"),
+                highchartOutput("worldPlot", height = "600px"),
               )
             )
           )
@@ -429,10 +429,10 @@ ui <- dashboardPage(
         
         box(
           status = "primary",
-          height = "450", width = "12", solidHeader = FALSE,
+          height = "650", width = "12", solidHeader = FALSE,
           column(
             width = 12,
-            highchartOutput("variant_weekly")
+            highchartOutput("variant_weekly", height = "600px")
           )
         ),
       ),      
@@ -453,10 +453,10 @@ ui <- dashboardPage(
           
           box(
             status = "primary",
-            height = "450", width = "12", solidHeader = FALSE,
+            height = "650", width = "12", solidHeader = FALSE,
             column(
               width = 12,
-              highchartOutput("distPlot_lineage_lineage"),
+              highchartOutput("distPlot_lineage_lineage", height = "600px"),
             )
           ),
           
@@ -506,10 +506,10 @@ ui <- dashboardPage(
         
         box(
           status = "primary",
-          height = "450", width = "12", solidHeader = FALSE,
+          height = "650", width = "12", solidHeader = FALSE,
           column(
             width = 12,
-            highchartOutput("distPlot_lineage_country")
+            highchartOutput("distPlot_lineage_country", height = "600px")
           )
         ),
       ),
