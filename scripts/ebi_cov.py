@@ -83,7 +83,8 @@ if __name__ == '__main__':
         host = args.server,
         port = args.port,
         user = args.user,
-        password = args.password        
+        password = args.password,
+        application_name = f'ebi_cov.py run by {args.user}',
     )
     C = conn.cursor()
     print ("{0} connected to db engine to use db {1}".format(datetime.datetime.now(), args.database))

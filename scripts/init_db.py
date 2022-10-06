@@ -365,6 +365,253 @@ CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
     )
     exec_commit(args, sql)
 
+@subcommand([
+    argument("-S", "--schema", action="store", help="schema name", required=True),
+    argument("-L", "--load_tables", action="store_true", help="whether to create load tables", required=False),
+])
+def create_tables(args):
+    schema = args.schema
+    prefix = 'load_' if args.load_tables else ''
+    sql_common = f"""
+CREATE TABLE IF NOT EXISTS {schema}.runid (
+    id                          SERIAL PRIMARY KEY,
+    ena_run                     VARCHAR(16) UNIQUE NOT NULL
+);
+CREATE TABLE IF NOT EXISTS {schema}.country (
+    id                                SERIAL PRIMARY KEY,
+    iso_a3                            CHAR(3),
+    iso_a2                            CHAR(2),
+    country_name                      VARCHAR(64),
+    country_name_local                TEXT
+);
+CREATE TABLE IF NOT EXISTS {schema}.collector (
+        id                SERIAL PRIMARY KEY,
+        broker_name       VARCHAR(64) NULL,
+        collected_by      TEXT NULL,
+        center_name       TEXT NULL
+);
+CREATE TABLE IF NOT EXISTS {schema}.host (
+        id                SERIAL PRIMARY KEY,
+        host              VARCHAR(128) NOT NULL,
+        tax_id            int
+);
+CREATE TABLE IF NOT EXISTS {schema}.instrument (
+        id                    SERIAL PRIMARY KEY,
+        instrument_platform   VARCHAR(16) NOT NULL,
+        instrument_model      VARCHAR(32) NOT NULL,
+        UNIQUE (instrument_platform, instrument_model)
+);
+CREATE TABLE IF NOT EXISTS {schema}.library (
+        id                  SERIAL PRIMARY KEY,
+        layout              {schema}.type_layout NOT NULL,
+        source              VARCHAR(32),
+        selection           VARCHAR(32),
+        strategy            VARCHAR(32)
+        -- FIXME: UNIQUE () ?
+);
+CREATE TABLE IF NOT EXISTS {schema}.metadata (
+        runid                       INT PRIMARY KEY REFERENCES {schema}.runid(id),
+        collection_date             DATE NULL,
+        collection_date_valid       BOOL,
+        country_id                  INT REFERENCES {schema}.country(id) NULL,
+        host_id                     INT REFERENCES {schema}.host(id) NULL,
+        host_sex                    {schema}.type_sex DEFAULT NULL,
+        instrument_id               INT REFERENCES {schema}.instrument(id) NULL,
+        sample_accession            VARCHAR(16),
+        study_accession             VARCHAR(16),
+        experiment_accession        VARCHAR(16)
+);
+CREATE TABLE IF NOT EXISTS {schema}.metaextension (
+        runid                       INT PRIMARY KEY REFERENCES {schema}.runid(id),
+        description                 TEXT NULL,
+        fastq_ftp                   TEXT,
+        isolate                     VARCHAR(128) NULL,
+        sample_capture_status       {schema}.type_status NULL,
+        strain                      VARCHAR(128),
+        checklist                   VARCHAR(16),
+        base_count                  DOUBLE PRECISION,
+        library_name                VARCHAR(128),
+        library_id                  INT REFERENCES {schema}.library(id) NULL,
+        first_created               DATE,
+        first_public                DATE NULL,
+        collector_id                INT REFERENCES {schema}.collector(id),
+        country_raw                 TEXT
+);
+CREATE TABLE IF NOT EXISTS {schema}.gene_id (
+        gene_id             VARCHAR(32) UNIQUE NOT NULL,
+        gene_name           {schema}.type_genename NOT NULL
+);
+CREATE TABLE IF NOT EXISTS {schema}.lineage_def (
+    variant_id             text,
+    pango                  text,
+    type_variant           text,
+    amino_acid_change      text,
+    protein_codon_position int,
+    ref_protein            text,
+    alt_protein            text,
+    gene                   text,
+    effect                 text,
+    snpeff_original_mut    text,
+    ref_pos_alt            text,
+    ref                    text,
+    alt                    text,
+    pos                    int,
+    description            text
+);
+CREATE TABLE IF NOT EXISTS {schema}.primer_artic_v3 (
+    chrom       CHAR(10), 
+    p_start     INT, 
+    p_end       INT, 
+    name        VARCHAR(32), 
+    primerpool  INT, 
+    strand      CHAR(1), 
+    sequence    TEXT
+);
+CREATE TABLE IF NOT EXISTS {schema}.primer_artic_v4 (
+    chrom       CHAR(10), 
+    p_start     INT, 
+    p_end       INT, 
+    name        VARCHAR(32), 
+    primerpool  INT, 
+    strand      CHAR(1), 
+    sequence    TEXT
+);
+CREATE TABLE IF NOT EXISTS {schema}.pcr_primers (
+    target_gene                VARCHAR(8),
+    origin                     VARCHAR(16),
+    country_id                 INT REFERENCES {schema}.country(id) NULL,
+    type                       VARCHAR(8), 
+    primer_name                VARCHAR(16), 
+    primer_set                 VARCHAR(16),
+    original_primer_name       VARCHAR(32), 
+    target_sequence            TEXT, 
+    target_sequence_start_pos  INT,
+    target_sequence_end_pos    INT, 
+    primer_size_bp             INT, 
+    reference_genome           VARCHAR(16),
+    update_time                DATE, 
+    doi                        VARCHAR(48), 
+    reference                  VARCHAR(32), 
+    other_reference            VARCHAR(32)  -- FIXME: ez gusztustalan oszlop, kell?
+);
+CREATE TABLE IF NOT EXISTS {schema}.amino_acid_symbol (
+    name                VARCHAR(16),
+    symbol_3letter      CHAR(3),
+    symbol_1letter      CHAR(1)
+);
+CREATE TABLE IF NOT EXISTS {schema}.lamp_primers (
+    target_gene                  VARCHAR(8), 
+    origin                       VARCHAR(32), 
+    country_id                   INT REFERENCES {schema}.country(id) NULL,
+    cat_type                     VARCHAR(8), 
+    primer_set                   VARCHAR(16),
+    primer_name                  VARCHAR(16), 
+    primer_name_type             VARCHAR(20), 
+    type                         CHAR(1), 
+    original_primer_name         VARCHAR(16),
+    primer_sequence_5_3          TEXT, 
+    target_sequence_start_pos    INT,
+    target_sequence_end_pos      INT, 
+    primer_size_bp               INT, 
+    reference_genome             VARCHAR(16),
+    update_time                  DATE, 
+    doi                          VARCHAR(32), 
+    reference                    VARCHAR(32)
+);
+CREATE TABLE IF NOT EXISTS {schema}.ecdc_covid_country_weekly (
+    country_id                        INT REFERENCES {schema}.country(id) NULL,
+    population                        INT,
+    date_year                         INT,
+    date_week                         INT,
+    cases                             INT,
+    deaths                            INT
+);
+-- FIXME: is it used somewhere?
+--CREATE TABLE IF NOT EXISTS {schema}.n_content (
+--    runid                              INT PRIMARY KEY REFERENCES {schema}.runid(id),
+--    num_of_pos_with_cov_nothigher_10   int,
+--    estimated_n_content                real,
+--    quality_status                     {schema}.type_quality
+--);
+
+    """
+    sql_cov = f"""
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}unique_cov (
+        runid                       INT, -- PRIMARY KEY REFERENCES {schema}.runid(id),
+        insertion_ts                TIMESTAMP,
+        snapshot                    VARCHAR(32) NOT NULL,
+        integrity                   {schema}.type_integrity NOT NULL
+);
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}cov (
+    runid                       INT, -- REFERENCES {schema}.unique_cov(runid),
+    pos                         int,               -- Position in the sequence
+    coverage                    int                -- Coverage in the given position
+);
+    """
+    sql_vcf = f"""
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}unique_vcf (
+        runid                       INT, -- PRIMARY KEY REFERENCES {schema}.runid(id),
+        insertion_ts                TIMESTAMP,
+        snapshot                    VARCHAR(32) NOT NULL,
+        integrity                   {schema}.type_integrity NOT NULL
+);
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}vcf_key (
+    key                         INT, -- PRIMARY KEY,
+    runid                       INT, -- REFERENCES {schema}.unique_vcf(runid),
+    pos                         INT NOT NULL,
+    ref                         TEXT NOT NULL,
+    alt                         TEXT
+);
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}annotation_binding (
+    key                         INT, -- REFERENCES {schema}.vcf_key(key),
+    gene_name                   {schema}.type_genename,
+    annotation_atom             {schema}.type_annotation_atom
+);
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}vcf (
+    key                         INT, -- PRIMARY KEY REFERENCES {schema}.vcf_key(key),
+    qual                        INT,
+    dp                          INT,
+    af                          REAL,
+    sb                          INT,
+    count_ref_forward_base      INT,
+    count_ref_reverse_base      INT,
+    count_alt_forward_base      INT,
+    count_alt_reverse_base      INT,
+    hrun                        INT,
+    indel                       BOOLEAN,
+    nmd                         {schema}.type_nmd,
+    major                       BOOLEAN,
+    ann_num                     INT
+);
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}annotation (
+    key                         INT, -- REFERENCES {schema}.vcf_key(key),
+    annotation_impact           {schema}.type_annotationimpact,
+    gene_name                   {schema}.type_genename,
+    feature_type                {schema}.type_featuretype,
+    feature_id                  {schema}.type_featureid,
+    transcript_biotype          {schema}.type_transcriptbiotype,
+    rank_                       {schema}.type_rank,
+    hgvs_c                      TEXT,
+    hgvs_p                      TEXT,
+    cdna_pos                    INT,
+    cdna_length                 INT,
+    cds_pos                     INT,
+    cds_length                  INT,
+    aa_pos                      INT,
+    aa_length                   INT,
+    distance                    INT,
+    errors_warnings_info        TEXT
+);
+CREATE TABLE IF NOT EXISTS {schema}.{prefix}vcf_lof (
+    key                         INT, -- REFERENCES {schema}.vcf_key(key),
+    lof                         {schema}.type_lof
+);
+    """
+    if args.load_tables:
+        exec_commit(args, sql_vcf + sql_cov)
+    else:
+        exec_commit(args, sql_common + sql_vcf + sql_cov)
+
 
 @subcommand([argument("-S", "--schema", action="store", help="schema name", required=True)])
 def create_functions(args):

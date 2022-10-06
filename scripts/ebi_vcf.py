@@ -119,6 +119,8 @@ if __name__ == '__main__':
                      help = "the name of the target vcf table in the database", default = 'vcf')
     parser.add_argument("-k", "--vcfkey_table_name", action = "store",
                      help = "the name of the target vcf key table in the database", default = 'vcf_key')
+    parser.add_argument("-K", "--vcfkey_table_name_readonly", action = "store",
+                     help = "the name of the vcf key table in the database to append date later. Used here to fetch largest key value", default = None)
     parser.add_argument("-m", "--vcfunique_table_name", action = "store",
                      help = "the name of the target vcf unique table in the database", default = 'unique_vcf')
     parser.add_argument("-a", "--vcfannotation_table_name", action = "store",
@@ -172,7 +174,8 @@ if __name__ == '__main__':
         host = args.server,
         port = args.port,
         user = args.user,
-        password = args.password        
+        password = args.password,
+        application_name = f'ebi_vcf.py run by {args.user}',
     )
     C = conn.cursor()
     print ("{0} connected to db engine to use db {1}".format(datetime.datetime.now(), args.database))
@@ -186,6 +189,10 @@ if __name__ == '__main__':
         offset = 0
     else:
         offset += 1
+    if args.vcfkey_table_name_readonly:
+        C.execute('SELECT MAX(key) + 1 FROM {}'.format(args.vcfkey_table_name_readonly))
+        offset_ro, = C.fetchall()[0]
+        offset = max(offset, offset_ro)
     print ("{0} offset is {1}".format(datetime.datetime.now(), offset))
 
     snapshot = args.snapshot if args.snapshot else extract_ena_run(args.input)
@@ -253,28 +260,34 @@ if __name__ == '__main__':
             del vcf
             continue
     
-        integrity.append('ok')
+        try:
 
-        info_dict_seq = vcf['INFO'].apply(info_dict)
-        dp4_seq = info_dict_seq.apply(proc_dp4)
-        ann_seq = info_dict_seq.apply(proc_ann)
-        lof_seq = info_dict_seq.apply(proc_lof).dropna()
-        
-        vcf['ena_run'] = runid
-        vcf['indel'] = vcf['INFO'].apply(indel)
-        vcf.drop(columns = ['INFO', 'CHROM'], inplace = True)
-        vcf['dp'] = info_dict_seq.apply(lambda x: x.get('DP'))
-        vcf['af'] = info_dict_seq.apply(lambda x: x.get('AF'))
-        for l in dp4_labels:
-            vcf[l] = dp4_seq.apply(lambda x: x.get(l))
-        vcf['major'] = info_dict_seq.apply(lambda x: x.get('MAJOR'))
-        vcf['nmd'] = info_dict_seq.apply(lambda x: x.get('NMD'))
-        vcf['sb'] = info_dict_seq.apply(lambda x: x.get('SB'))
-        vcf['hrun'] = info_dict_seq.apply(lambda x: x.get('HRUN'))
-        vcf['ann_num'] = ann_seq.apply(len)
-        vcf['qual'] = vcf['QUAL'].apply(qual)
-        vcf['qual'] = vcf['qual'].astype(pandas.Int32Dtype())
-        vcf.drop(columns = ['QUAL'], inplace = True)
+            info_dict_seq = vcf['INFO'].apply(info_dict)
+            dp4_seq = info_dict_seq.apply(proc_dp4)
+            ann_seq = info_dict_seq.apply(proc_ann)
+            lof_seq = info_dict_seq.apply(proc_lof).dropna()
+            
+            vcf['ena_run'] = runid
+            vcf['indel'] = vcf['INFO'].apply(indel)
+            vcf.drop(columns = ['INFO', 'CHROM'], inplace = True)
+            vcf['dp'] = info_dict_seq.apply(lambda x: x.get('DP'))
+            vcf['af'] = info_dict_seq.apply(lambda x: x.get('AF'))
+            for l in dp4_labels:
+                vcf[l] = dp4_seq.apply(lambda x: x.get(l))
+            vcf['major'] = info_dict_seq.apply(lambda x: x.get('MAJOR'))
+            vcf['nmd'] = info_dict_seq.apply(lambda x: x.get('NMD'))
+            vcf['sb'] = info_dict_seq.apply(lambda x: x.get('SB'))
+            vcf['hrun'] = info_dict_seq.apply(lambda x: x.get('HRUN'))
+            vcf['ann_num'] = ann_seq.apply(len)
+            vcf['qual'] = vcf['QUAL'].apply(qual)
+            vcf['qual'] = vcf['qual'].astype(pandas.Int32Dtype())
+            vcf.drop(columns = ['QUAL'], inplace = True)
+            integrity.append('ok')
+        except Exception as e:
+            print ("{0} problem processing file {1} -- {2}".format(now, ti.name, e))
+            integrity.append('corrupt file')
+            continue
+
 
         data.clear()
         index.clear()
