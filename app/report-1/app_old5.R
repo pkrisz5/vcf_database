@@ -12,10 +12,9 @@ library(ISOweek)
 library(NGLVieweR)
 library(RColorBrewer)
 library(shinyThings)
-library(jsTreeR) 
-library(shinybusy)
+library(jsTreeR)  
 
-app_version <- "v_003.006"
+app_version <- "v_002.002"
 
 # Connection details
 
@@ -27,9 +26,12 @@ con <- dbPool(
   host = config$host,
   port = config$port,
   user = config$user,
-  password = config$password,
-  option = config$option
+  password = config$password
 )
+
+
+
+
 
 onStop(function() {
   poolClose(con)
@@ -40,57 +42,32 @@ colorstw <- c(brewer.pal(n=8, name="Set2"),brewer.pal(n=12, name="Paired")[-c(3,
 
 # Variables from database
 
-app_country_samples <- tbl(con, "app_country_samples_full") %>%
+app_country_samples <- tbl(con, "app_country_samples") %>%
   collect()%>%
   as.data.frame() 
+
+app_lineage_def_description <- tbl(con, "app_lineage_def_description") %>%
+  collect()
 
 app_lineage <- tbl(con, "app_lineage") %>%
   collect()
 
-# app_new_cases <- tbl(con, "app_new_cases") %>%
-#   collect()
-
-app_human_meta_mv <- tbl(con, "app_human_meta_mv") %>%
-  collect()
-
-app_human_meta_mv_jhd <- tbl(con, "app_human_meta_mv_jhd") %>%
-  collect()
-
-app_new_cases <- tbl(con, "app_new_cases_jhd") %>%
+app_new_cases <- tbl(con, "app_new_cases") %>%
   collect()
 
 app_variants_weekly <- tbl(con, "app_variants_weekly") %>%
   collect()
 
-# app_worldplot_data<- tbl(con, "app_worldplot_data") %>%
-#   collect()
-
-lineage_def_data <- tbl(con, "lineage_def") %>%
+app_worldplot_data<- tbl(con, "app_worldplot_data") %>%
   collect()
-
-unique_ena_run_summary <- tbl(con, "unique_ena_run_summary") %>%
-  collect()
-
-
-
-#sample_count <- tbl(con, "app_sample_count") %>% 
-#  collect()
 
 ### This part will create the master table for variant graphs
 
-## Ez a rész már be lett doblva a materialized viewba
-# new_cases <- app_new_cases %>%
-#   mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-#   mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
-#   dplyr::select(country, date, date_year, date_week, weekly_sample, cases)
-### eddig
+new_cases <- app_new_cases %>%
+  mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
+  mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
+  dplyr::select(country_name, date, date_year, date_week, weekly_sample, ecdc_covid_country_weekly_cases)
 
-# ezt a pici részt ki lehet venni, ha frissül a mat view
-# new_cases <- app_new_cases %>%
-#    mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-#    mutate(date = paste(as.character(date_year), "-W", as.character(date_week_iso), "-1", sep = "")) %>%
-#    mutate(date = ISOweek2date(date)) %>%
-#    dplyr::select(country, date, date_year, date_week, weekly_sample, cases)
 
 variants_weekly <- app_variants_weekly %>%
   pivot_wider(names_from = variant_id, values_from = weekly_variant_sample)
@@ -98,28 +75,28 @@ variants_weekly <- app_variants_weekly %>%
 variants_weekly$cases_with_variant_id <- rowSums(variants_weekly[, c(-1, -2, -3)], na.rm = TRUE)
 
 
-variant_master_table <- app_new_cases %>%
+variant_master_table <- new_cases %>%
   left_join(variants_weekly) %>%
   mutate(
     # `Other variants` = weekly_sample - cases_with_variant_id,
-    `Non-sequenced new cases` = cases - weekly_sample
+    `Non-sequenced new cases` = ecdc_covid_country_weekly_cases - weekly_sample
   ) %>%
-  dplyr::select(-weekly_sample, -cases, -cases_with_variant_id) %>%
-  pivot_longer(cols = !any_of(c("country", "date", "date_year", "date_week")))
+  dplyr::select(-weekly_sample, -ecdc_covid_country_weekly_cases, -cases_with_variant_id) %>%
+  pivot_longer(cols = !any_of(c("country_name", "date", "date_year", "date_week")))
 
 variants <- unique(app_lineage$variant_id)
 variants <- variants[variants!="Not analysed yet " & variants!="Other variant" ]
 
 # This part creates a table for world data plot
 
-# 
-# worldplot_data <- app_worldplot_data %>%
-#   mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-#   mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
-#   group_by(country) %>%
-#   arrange(date) %>%
-#   mutate(sum_weekly_sample = cumsum(weekly_sample)) %>%
-#   ungroup()
+
+worldplot_data <- app_worldplot_data %>%
+  mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
+  mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
+  group_by(Country) %>%
+  arrange(date) %>%
+  mutate(sum_weekly_sample = cumsum(weekly_sample)) %>%
+  ungroup()
 
 
 # Tree
@@ -155,14 +132,14 @@ makeNodes <- function(leaves){
   lapply(dat$item[dat$parent == "root"], f)
 }
 
-# table_description <- tbl(con, "table_description") %>%
-#   collect()
-# inds <- vector()
-# for (i in 1:nrow(table_description)){
-#   inds[i] <- paste(table_description[i,"type"], table_description[i,"table_name"], sep = '/')
-# }
-# 
-# nodes <- makeNodes(inds)
+table_description <- tbl(con, "table_description") %>%
+  collect()
+inds <- vector()
+for (i in 1:nrow(table_description)){
+  inds[i] <- paste(table_description[i,"type"], table_description[i,"table_name"], sep = '/')
+}
+
+nodes <- makeNodes(inds)
 
 
 ############################################################################################
@@ -218,7 +195,6 @@ ui <- dashboardPage(
   
   
   dashboardBody(
-    add_busy_spinner(spin = "fading-circle", position = "bottom-right", timeout = 1000),
     tags$head(tags$style(HTML('
       .content-wrapper {
         background-color: #ffffff;
@@ -226,126 +202,14 @@ ui <- dashboardPage(
     '
     ))),
     tabItems(
-
-      
-      
-      
-
-      
-      
-      
-      
-      tabItem(
-        
-## Samples from countries //Graphs         
-        
-        tabName = "country_graph",
-        tabsetPanel(
-          type = "tabs",
-          
-          tabPanel(
-            "EU+UK",
-            # tags$h4("The graph below shows how many samples were sequenced and sent to EBI in a gived day in a given EU state"),
-            #
-            
-            column( width = 4,
-                    radioButtons("eu_graph_type",
-                                 label = "Visualized data",
-                                 choices = c("Weekly sample number", "Cumulative sample number", "Percent of sequenced samples"),
-                                 inline = FALSE, selected = "Weekly sample number"
-                    ),
-                    
-            ),
-            
-            column( width = 4,
-                    radioSwitchButtons("eu_log_lin",
-                                       label = "Y-axis",
-                                       choices = c("linear", "logarithmic"),
-                                       selected = "linear",
-                                       selected_background = "#367fa9"
-                    )
-            ),
-            
-            
-            box(
-              title = "",
-              status = "primary",
-              height = "650", width = "12", solidHeader = FALSE,
-              column(
-                width = 12,
-                highchartOutput("euPlot", height = "600px"),
-              )
-            )
-          ),
-          
-          tabPanel(
-            "World",
-            # tags$h4("The graph below shows how many samples were sequenced and sent to EBI in a gived day in a given EU state"),
-            #
-            
-            column( width = 4,
-                    radioButtons("world_graph_type",
-                                 label = "Visualized data",
-                                 choices = c("Weekly sample number", "Cumulative sample number", "Percent of sequenced samples"),
-                                 inline = FALSE, selected = "Weekly sample number"
-                    ),
-                    
-            ),
-            
-            column( width = 4,
-                    radioSwitchButtons("world_log_lin",
-                                       label = "Y-axis",
-                                       choices = c("linear", "logarithmic"),
-                                       selected = "linear",
-                                       selected_background = "#367fa9"
-                    )
-            ),
-            
-            column( width = 4,
-                    selectInput("world_select_country",
-                                label = span("Select countries", bsButton("q_select_country_world", label = "", icon = icon("info-circle"), style = "secondary", size = "small")),
-                                choices = unique(app_human_meta_mv$country_name),
-                                selected = c("Spain", "Australia", "Brazil"),
-                                multiple = TRUE
-                    )
-            ),
-            
-            bsPopover(
-              id = "q_select_country_world", title = "Select countries",
-              content = paste0('Click to the empty region of the box below and a dropdown menu appears where you can add more countries. Select the unwanted country and use "del" button on you keyboard to clear it from the list'),
-              trigger = "hover",
-              options = list(container = "body")
-            ),
-            
-            
-            
-            
-            
-            box(
-              title = "",
-              status = "primary",
-              height = "650", width = "12", solidHeader = FALSE,
-              column(
-                width = 12,
-                highchartOutput("worldPlot", height = "600px"),
-              )
-            )
-          )
-
-          
-        )
-      ),
-
-      
-      
-## Samples from countries //Maps      
       tabItem(
         tabName = "country_map",
         tabsetPanel(
           type = "tabs",
           
+          
           tabPanel(
-            "EU+UK",
+            "EU",
             # tags$h4("The map below shows how many sequenced samples arrived from various EU state"),
             # checkboxInput("relative_to_population_eu", label = "Relative to population", value = FALSE),
             
@@ -385,10 +249,10 @@ ui <- dashboardPage(
             highchartOutput("world_map", height = "600px")
           )
         ),
-      ),      
+      ),
       
       
-## Variants            
+      
       tabItem(
         tabName = "variants",
         fluidRow(
@@ -396,7 +260,7 @@ ui <- dashboardPage(
             width = 4,
             selectInput("selected_country_for_variants",
                         label = "Select country",
-                        choices = unique(variant_master_table$country),
+                        choices = unique(variant_master_table$country_name),
                         selected = "Netherlands"
             ),
             
@@ -429,16 +293,139 @@ ui <- dashboardPage(
         
         box(
           status = "primary",
-          height = "650", width = "12", solidHeader = FALSE,
+          height = "450", width = "12", solidHeader = FALSE,
           column(
             width = 12,
-            highchartOutput("variant_weekly", height = "600px")
+            highchartOutput("variant_weekly")
           )
         ),
-      ),      
+      ),
       
-
-## Variants (VOC/VUI selection)      
+      
+      
+      
+      tabItem(
+        tabName = "country_graph",
+        tabsetPanel(
+          type = "tabs",
+          
+          tabPanel(
+            "EU",
+            # tags$h4("The graph below shows how many samples were sequenced and sent to EBI in a gived day in a given EU state"),
+            #
+            
+            column( width = 4,
+                    radioButtons("eu_graph_type",
+                                 label = "Visualized data",
+                                 choices = c("Weekly sample number", "Cumulative sample number", "Percent of sequenced samples"),
+                                 inline = FALSE, selected = "Weekly sample number"
+                    ),
+                    
+            ),
+            
+            column( width = 4,
+                    radioSwitchButtons("eu_log_lin",
+                                       label = "Y-axis",
+                                       choices = c("linear", "logarithmic"),
+                                       selected = "linear",
+                                       selected_background = "#367fa9"
+                    )
+            ),
+            
+            
+            box(
+              title = "",
+              status = "primary",
+              height = "450", width = "12", solidHeader = FALSE,
+              column(
+                width = 12,
+                highchartOutput("euPlot"),
+              )
+            )
+          ),
+          
+          tabPanel(
+            "World",
+            # tags$h4("The graph below shows how many samples were sequenced and sent to EBI in a gived day in a given EU state"),
+            #
+            
+            column( width = 4,
+                    radioButtons("world_graph_type",
+                                 label = "Visualized data",
+                                 choices = c("Weekly sample number", "Cumulative sample number", "Percent of sequenced samples"),
+                                 inline = FALSE, selected = "Weekly sample number"
+                    ),
+                    
+            ),
+            
+            column( width = 4,
+                    radioSwitchButtons("world_log_lin",
+                                       label = "Y-axis",
+                                       choices = c("linear", "logarithmic"),
+                                       selected = "linear",
+                                       selected_background = "#367fa9"
+                    )
+            ),
+            
+            column( width = 4,
+                    selectInput("world_select_country",
+                                label = span("Select countries", bsButton("q_select_country_world", label = "", icon = icon("info-circle"), style = "secondary", size = "small")),
+                                choices = unique(worldplot_data$Country),
+                                selected = c("Spain", "Australia", "United States"),
+                                multiple = TRUE
+                    )
+            ),
+            
+            bsPopover(
+              id = "q_select_country_world", title = "Select countries",
+              content = paste0('Click to the empty region of the box below and a dropdown menu appears where you can add more countries. Select the unwanted country and use "del" button on you keyboard to clear it from the list'),
+              trigger = "hover",
+              options = list(container = "body")
+            ),
+            
+            
+            
+            
+            
+            box(
+              title = "",
+              status = "primary",
+              height = "450", width = "12", solidHeader = FALSE,
+              column(
+                width = 12,
+                highchartOutput("worldPlot"),
+              )
+            )
+          )
+          
+          
+          
+          
+        )
+      ),
+      
+      
+      
+      tabItem(
+        tabName = "lineage_graph_country",
+        fluidRow(),
+        radioButtons("selected_country",
+                     label = "Select country",
+                     choices = unique(app_lineage$clean_country),
+                     inline = TRUE, selected = "United Kingdom"
+        ),
+        
+        box(
+          status = "primary",
+          height = "450", width = "12", solidHeader = FALSE,
+          column(
+            width = 12,
+            highchartOutput("distPlot_lineage_country")
+          )
+        ),
+      ),
+      
+      
       
       tabItem(
         tabName = "lineage_graph_lineage",
@@ -453,10 +440,10 @@ ui <- dashboardPage(
           
           box(
             status = "primary",
-            height = "650", width = "12", solidHeader = FALSE,
+            height = "450", width = "12", solidHeader = FALSE,
             column(
               width = 12,
-              highchartOutput("distPlot_lineage_lineage", height = "600px"),
+              highchartOutput("distPlot_lineage_lineage"),
             )
           ),
           
@@ -493,30 +480,6 @@ ui <- dashboardPage(
       #   ),
       # ),
       
-       
-## Variants (Country selection)     
-      tabItem(
-        tabName = "lineage_graph_country",
-        fluidRow(),
-        radioButtons("selected_country",
-                     label = "Select country",
-                     choices = unique(app_lineage$country),
-                     inline = TRUE, selected = "United Kingdom"
-        ),
-        
-        box(
-          status = "primary",
-          height = "650", width = "12", solidHeader = FALSE,
-          column(
-            width = 12,
-            highchartOutput("distPlot_lineage_country", height = "600px")
-          )
-        ),
-      ),
-      
-      
-      
-## Info      
       tabItem(
         tabName = "menu_info",
         fluidRow(
@@ -524,39 +487,40 @@ ui <- dashboardPage(
           # tags$img(src='vcf_database_overview.png'),
           
           infoBoxOutput("version"), br(), br(), br(), br(), br(),
-          tags$h4("Number of samples"), br(),
+          tags$h4("The database contains three tables:"), br(),
           infoBoxOutput("vcf_count"),
-          infoBoxOutput("meta_count"),  br(),
+          infoBoxOutput("cov_count"),
+          infoBoxOutput("meta_count"),
           
           
-          # box( title = "Schema Browser",
-          #      status = "primary",
-          #      width = "4",solidHeader = T,
-          #      column(width = 12,
-          #             jstreeOutput("jstree"),
-          #             style = "height:380px; overflow-y: scroll;overflow-x: scroll;"
-          #      ),
-          #      
-          # ),
-          # 
-          # 
-          # box(
-          #   title = 'Description of the selected table/view/function',
-          #   status = "primary",
-          #   width = "8", solidHeader = TRUE,
-          #   h3(textOutput("filtered_table_name")),
-          #   h4(textOutput("filtered_table_title")),
-          #   textOutput("filtered_table_description"),
-          #   
-          #   
-          #   column(
-          #     width = 12,
-          #     #textOutput("textxxx"),
-          #     DT::dataTableOutput("table_selected_column_description"),
-          #     style = "overflow-x: scroll;"
-          #   ),
-          #   verbatimTextOutput("filtered_table_sql")
-          # ),
+          box( title = "Schema Browser",
+               status = "primary",
+               width = "4",solidHeader = T,
+               column(width = 12,
+                      jstreeOutput("jstree"),
+                      style = "height:380px; overflow-y: scroll;overflow-x: scroll;"
+               ),
+               
+          ),
+          
+          
+          box(
+            title = 'Description of the selected table/view/function',
+            status = "primary",
+            width = "8", solidHeader = TRUE,
+            h3(textOutput("filtered_table_name")),
+            h4(textOutput("filtered_table_title")),
+            textOutput("filtered_table_description"),
+
+
+            column(
+              width = 12,
+              #textOutput("textxxx"),
+              DT::dataTableOutput("table_selected_column_description"),
+              style = "overflow-x: scroll;"
+            ),
+            verbatimTextOutput("filtered_table_sql")
+          ),
           
           
           
@@ -637,7 +601,7 @@ ui <- dashboardPage(
           #     DT::dataTableOutput("lineage_head")
           #   )
           # ),
-          br(), br(), br(), br(), br(),'You can send any comments/suggestions: Kriszián Papp (krisztian.papp@phys-gs.elte.hu)', br(),
+          'You can send any comments/suggestions: Kriszián Papp (krisztian.papp@phys-gs.elte.hu)', br(),
         ),
       )
     ),
@@ -705,7 +669,7 @@ ui <- dashboardPage(
   )
 )
 
-############################################################################################ 
+############################################################################################
 # Server part of the the app
 ############################################################################################
 
@@ -714,45 +678,47 @@ server <- function(input, output) {
     map <- jsonlite::fromJSON(txt = "eugeo.json", simplifyVector = FALSE)
     
     if (input$relative_to_population_eu) {
-      # y <- tbl(con, "ecdc_covid_country_weekly") %>%
-      #   left_join(tbl(con, "country"), by = c("country_id" = "id")) %>%
-      #   select(country_name, population) %>%
-      #   distinct() %>%
-      #   rename(country = "country_name") %>%
-      #   collect()
-      # x <- app_country_samples %>%
-      #   left_join(y) %>%
-      #   mutate(
-      #     n_sample = round(n_sample / population * 1000000, 3),
-      #     log_n_sample = log10(n_sample)
-      #   )
-      # 
+      y <- tbl(con, "ecdc_covid_country_weekly") %>%
+        select(country_name, population) %>%
+        distinct() %>%
+        rename(clean_country = "country_name") %>%
+        collect()
+      x <- app_country_samples %>%
+        left_join(y) %>%
+        mutate(
+          clean_country = ifelse(clean_country == "USA", "United States of America", clean_country),
+          n_sample = round(n_sample / population * 1000000, 3),
+          log_n_sample = log10(n_sample)
+        )
+      
       
       highchart() %>%
         hc_add_series_map(
-          map, app_country_samples,
-          value = "relative_log_n_sample", joinBy = c("name", "country")
+          map, x,
+          value = "log_n_sample", joinBy = c("name", "clean_country")
         ) %>%
         # hc_colorAxis(stops = color_stops()) %>%
         hc_legend(labelFormat = "", title = list(text = "Number of samples relative to 1 million citizen in log10 scale")) %>%
-        hc_title(text = "Number of raw SARS-CoV-2 sequence from EU+UK") %>%
+        hc_title(text = "Number of raw SARS-CoV-2 sequence from EU") %>%
         hc_subtitle(text = "Move mouse above a country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.relative_n_sample} samples relative to 1 million derived from  {point.country}")%>%
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples relative to 1 million derived from  {point.clean_country}")%>%
         hc_colors(colorstw)
     }
     else {
+      x <- app_country_samples %>%
+        mutate(clean_country = ifelse(clean_country == "USA", "United States of America", clean_country))
       highchart() %>%
         hc_add_series_map(
-          map, app_country_samples,
-          value = "log_n_sample", joinBy = c("name", "country")
+          map, x,
+          value = "log_n_sample", joinBy = c("name", "clean_country")
         ) %>%
         # hc_colorAxis(stops = color_stops()) %>%
         hc_legend(labelFormat = "", title = list(text = "Number of samples in log10 scale")) %>%
-        hc_title(text = "Number of raw SARS-CoV-2 sequence from EU+UK") %>%
+        hc_title(text = "Number of raw SARS-CoV-2 sequence from EU") %>%
         hc_subtitle(text = "Move mouse above a country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.country}")%>%
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.clean_country}")%>%
         hc_colors(colorstw)
     }
   })
@@ -760,47 +726,50 @@ server <- function(input, output) {
   
   
   output$world_map <- renderHighchart({
-    worldgeojson$features[[3]]$properties$name <- "United States" # Fix non-standard country name in map file
-    worldgeojson$features[[72]]$properties$name <- "Russian Federation" # Fix non-standard country name in map file
     if (input$relative_to_population_world) {
-      # y <- tbl(con, "ecdc_covid_country_weekly") %>%
-      #   select(country_id, population) %>%
-      #   distinct() %>%
-      #   left_join(tbl(con, "country"), by = c("country_id" = "id")) %>%
-      #   select(country_name, population) %>%
-      #   rename(country = "country_name") %>%
-      #   collect()
-      # x <- app_country_samples %>%
-      #   left_join(y) %>%
-      #   mutate(
-      #     n_sample = round(n_sample / population * 1000000, 3),
-      #     log_n_sample = log10(n_sample)
-      #   )
+      y <- tbl(con, "ecdc_covid_country_weekly") %>%
+        select(country_name, population) %>%
+        distinct() %>%
+        rename(clean_country = "country_name") %>%
+        mutate(
+          clean_country = ifelse(clean_country == "United States", "USA", clean_country),
+          clean_country = ifelse(clean_country == "Russian Federation", "Russia", clean_country)
+        ) %>%
+        collect()
+      x <- app_country_samples %>%
+        left_join(y) %>%
+        mutate(
+          clean_country = ifelse(clean_country == "USA", "United States of America", clean_country),
+          n_sample = round(n_sample / population * 1000000, 3),
+          log_n_sample = log10(n_sample)
+        )
       highchart() %>%
         hc_add_series_map(
-          worldgeojson, app_country_samples,
-          value = "relative_log_n_sample", joinBy = c("name", "country")
+          worldgeojson, x,
+          value = "log_n_sample", joinBy = c("name", "clean_country")
         ) %>%
         # hc_colorAxis(stops = color_stops()) %>%
         hc_legend(labelFormat = "", title = list(text = "Number of samples relative to 1 million citizen in log10 scale")) %>%
         hc_title(text = "Number of raw SARS-CoV-2 sequence from worldwide") %>%
         hc_subtitle(text = "Move mouse above the country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.relative_n_sample} samples relative to 1 million derived from {point.country}")%>%
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples relative to 1 million derived from {point.clean_country}")%>%
         hc_colors(colorstw)
     }
     else {
+      x <- app_country_samples %>%
+        mutate(clean_country = ifelse(clean_country == "USA", "United States of America", clean_country))
       highchart() %>%
         hc_add_series_map(
-          worldgeojson, app_country_samples,
-          value = "log_n_sample", joinBy = c("name", "country")
+          worldgeojson, x,
+          value = "log_n_sample", joinBy = c("name", "clean_country")
         ) %>%
         # hc_colorAxis(stops = color_stops()) %>%
         hc_legend(labelFormat = "", title = list(text = "Number of samples in log10 scale")) %>%
         hc_title(text = "Number of raw SARS-CoV-2 sequence from worldwide") %>%
         hc_subtitle(text = "Move mouse above the country to see the numbers") %>%
         hc_mapNavigation(enabled = TRUE) %>%
-        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.country}")%>%
+        hc_tooltip(useHTML = TRUE, headerFormat = "", pointFormat = "{point.n_sample} samples derived from {point.clean_country}")%>%
         hc_colors(colorstw)
     }
   })
@@ -809,7 +778,7 @@ server <- function(input, output) {
   
   output$structure_open <- renderNGLVieweR({
     # x <- "(:A OR :B OR :C) AND (501 OR 570 OR 681 OR 716 OR 982 OR 1118)"
-    selected_AA <- lineage_def_data %>%
+    selected_AA <- tbl(con, "lineage_def") %>%
       dplyr::filter(variant_id == !!input$selected_lineage) %>%
       dplyr::filter(
         # type == "SNP",
@@ -896,7 +865,7 @@ server <- function(input, output) {
   
   output$structure_closed <- renderNGLVieweR({
     # x <- "(:A OR :B OR :C) AND (501 OR 570 OR 681 OR 716 OR 982 OR 1118)"
-    selected_AA <- lineage_def_data %>%
+    selected_AA <- tbl(con, "lineage_def") %>%
       dplyr::filter(variant_id == !!input$selected_lineage) %>%
       dplyr::filter(
         # type == "SNP",
@@ -976,31 +945,29 @@ server <- function(input, output) {
       "Ireland", "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland", "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden"
     )
     
-    # x <- tbl(con, "app_human_meta_mv") %>%
-    #   collect()
-    # x <- tbl(con, "metadata") %>%
-    #   left_join(tbl(con, "country"), by = c("country_id" = "id")) %>%
-    #   dplyr::mutate(country = ifelse(country_name == "USA", "United States", country_name)) %>%
-    #   filter(!is.na(collection_date)) %>%
-    #   dplyr::filter(collection_date < today()) %>%
-    #   dplyr::filter(collection_date > as.Date("2019-12-01")) %>%
-    #   filter(!is.na(country_name)) %>%
-    #   dplyr::filter(host_id == 3) %>%
-    #   # dplyr::filter(clean_collection_date>as.Date("2020-03-15"))%>%
-    #   dplyr::rename(
-    #     country = "country_name",
-    #     date_year = "date_isoyear",
-    #     date_week = "date_isoweek"
-    #   ) %>%
-    #   dplyr::select(ena_run, Country, clean_collection_date, date_year, date_week) %>%
-    #   group_by(country, date_year, date_week) %>%
-    #   dplyr::summarise(weekly_sample = n()) %>%
-    #   collect()
-    x <- app_human_meta_mv %>%
-      # mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-      # mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
-      dplyr::filter(country_name %in% local(eu)) %>%
-      group_by(country_name) %>%
+    
+    x <- tbl(con, "meta") %>%
+      dplyr::mutate(clean_country = ifelse(clean_country == "USA", "United States", clean_country)) %>%
+      filter(!is.na(clean_collection_date)) %>%
+      dplyr::filter(clean_collection_date < today()) %>%
+      dplyr::filter(clean_collection_date > as.Date("2019-12-01")) %>%
+      filter(!is.na(clean_country)) %>%
+      dplyr::filter(clean_host == "Homo sapiens") %>%
+      # dplyr::filter(clean_collection_date>as.Date("2020-03-15"))%>%
+      dplyr::rename(
+        Country = "clean_country",
+        date_year = "date_isoyear",
+        date_week = "date_isoweek"
+      ) %>%
+      dplyr::select(ena_run, Country, clean_collection_date, date_year, date_week) %>%
+      group_by(Country, date_year, date_week) %>%
+      dplyr::summarise(weekly_sample = n()) %>%
+      collect()
+    x <- x %>%
+      mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
+      mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
+      dplyr::filter(Country %in% local(eu)) %>%
+      group_by(Country) %>%
       arrange(date) %>%
       mutate(sum_weekly_sample = cumsum(weekly_sample)) %>%
       ungroup()
@@ -1010,10 +977,10 @@ server <- function(input, output) {
     if (input$eu_graph_type=="Weekly sample number"){
       highchart(type = "stock") %>%
         # hc_add_series(x, "scatter", hcaes(x=clean_collection_date, y=n, group=Country),
-        hc_add_series(x, "scatter", hcaes(x = date, y = weekly_sample, group = country_name),
+        hc_add_series(x, "scatter", hcaes(x = date, y = weekly_sample, group = Country),
                       tooltip = list(pointFormat = "Number of samples sequenced on a given week in {point.Country}:{point.weekly_sample}: ")
         ) %>%
-        hc_title(text = "Number of samples derived from EU+UK states on a given week") %>%
+        hc_title(text = "Number of samples derived from EU states on a given week") %>%
         hc_legend(
           enabled = TRUE,
           title = list(text = "Click below on countries to hide/show them on the graph:")
@@ -1033,10 +1000,10 @@ server <- function(input, output) {
       if (input$eu_graph_type=="Cumulative sample number"){
         highchart(type = "stock") %>%
           # hc_add_series(x, "scatter", hcaes(x=clean_collection_date, y=n, group=Country),
-          hc_add_series(x, "scatter", hcaes(x = date, y = sum_weekly_sample, group = country_name),
+          hc_add_series(x, "scatter", hcaes(x = date, y = sum_weekly_sample, group = Country),
                         tooltip = list(pointFormat = "Number of samples sequenced in {point.Country}:{point.sum_weekly_sample}: ")
           ) %>%
-          hc_title(text = "Number of samples derived from EU+UK states on a given week") %>%
+          hc_title(text = "Number of samples derived from EU states on a given week") %>%
           hc_legend(
             enabled = TRUE,
             title = list(text = "Click below on countries to hide/show them on the graph:")
@@ -1053,34 +1020,30 @@ server <- function(input, output) {
           hc_plotOptions(scatter = list(lineWidth = 1))%>%
           hc_colors(colorstw)
       } else {
+        x <- tbl(con, "meta") %>%
+          dplyr::filter(clean_host == "Homo sapiens") %>%
+          dplyr::mutate(clean_country = ifelse(clean_country == "USA", "United States", clean_country)) %>%
+          dplyr::filter(!is.na(clean_collection_date)) %>%
+          dplyr::filter(clean_collection_date > as.Date("2020-03-15")) %>%
+          dplyr::filter(clean_collection_date < today()) %>%
+          dplyr::rename(
+            country_name = "clean_country",
+            date_year = "date_isoyear",
+            date_week = "date_isoweek"
+          ) %>%
+          dplyr::select(ena_run, country_name, clean_collection_date, date_year, date_week) %>%
+          group_by(country_name, date_year, date_week) %>%
+          dplyr::summarise(weekly_sample = n()) %>%
+          # left_join(tbl(con2, "country_iso"), copy = TRUE)%>%
+          left_join(tbl(con, "ecdc_covid_country_weekly")) %>%
+          filter(ecdc_covid_country_weekly_cases != 0) %>%
+          mutate(pct = round(weekly_sample / ecdc_covid_country_weekly_cases * 100, 2)) %>%
+          dplyr::select(country_name, iso_a3, date_year, date_week, weekly_sample, ecdc_covid_country_weekly_cases, pct) %>%
+          collect()
         
-        # x <- tbl(con, "app_human_meta_mv_jhd") %>%
-        #   collect()
-        
-        # x <- tbl(con, "meta") %>%
-        #   dplyr::filter(clean_host == "Homo sapiens") %>%
-        #   dplyr::mutate(country = ifelse(country == "USA", "United States", country)) %>%
-        #   dplyr::filter(!is.na(clean_collection_date)) %>%
-        #   dplyr::filter(clean_collection_date > as.Date("2020-03-15")) %>%
-        #   dplyr::filter(clean_collection_date < today()) %>%
-        #   dplyr::rename(
-        #     country_name = "country",
-        #     date_year = "date_isoyear",
-        #     date_week = "date_isoweek"
-        #   ) %>%
-        #   dplyr::select(ena_run, country_name, clean_collection_date, date_year, date_week) %>%
-        #   group_by(country_name, date_year, date_week) %>%
-        #   dplyr::summarise(weekly_sample = n()) %>%
-        #   # left_join(tbl(con2, "country_iso"), copy = TRUE)%>%
-        #   left_join(tbl(con, "ecdc_covid_country_weekly")) %>%
-        #   filter(cases != 0) %>%
-        #   mutate(pct = round(weekly_sample / cases * 100, 2)) %>%
-        #   dplyr::select(country_name, iso_a3, date_year, date_week, weekly_sample, cases, pct) %>%
-        #   collect()
-        
-        x <- app_human_meta_mv_jhd %>%
-          # mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-          # mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
+        x <- x %>%
+          mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
+          mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
           dplyr::filter(country_name %in% local(eu))%>%
           dplyr::filter(pct>=0)
         
@@ -1113,20 +1076,15 @@ server <- function(input, output) {
   
   output$worldPlot <- renderHighchart({
     
-    x <- app_human_meta_mv %>%
-      # mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-      # mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = ""))) %>%
-      dplyr::filter(country_name %in% input$world_select_country) %>%
-      group_by(country_name) %>%
-      arrange(date) %>%
-      mutate(sum_weekly_sample = cumsum(weekly_sample)) %>%
-      ungroup()
     
+    
+    x <- worldplot_data %>%
+      dplyr::filter(Country %in% input$world_select_country)
     
     if (input$world_graph_type=="Weekly sample number"){
       highchart(type = "stock") %>%
         # hc_add_series(x, "scatter", hcaes(x=clean_collection_date, y=n, group=Country),
-        hc_add_series(x, "scatter", hcaes(x = date, y = weekly_sample, group = country_name),
+        hc_add_series(x, "scatter", hcaes(x = date, y = weekly_sample, group = Country),
                       tooltip = list(pointFormat = "Number of samples sequenced on a given week in {point.Country}:{point.weekly_sample}: ")
         ) %>%
         hc_title(text = "Number of samples derived from countries on a given week") %>%
@@ -1149,7 +1107,7 @@ server <- function(input, output) {
       if (input$world_graph_type=="Cumulative sample number"){
         highchart(type = "stock") %>%
           # hc_add_series(x, "scatter", hcaes(x=clean_collection_date, y=n, group=Country),
-          hc_add_series(x, "scatter", hcaes(x = date, y = sum_weekly_sample, group = country_name),
+          hc_add_series(x, "scatter", hcaes(x = date, y = sum_weekly_sample, group = Country),
                         tooltip = list(pointFormat = "Number of samples sequenced in {point.Country}:{point.sum_weekly_sample}: ")
           ) %>%
           hc_title(text = "Number of samples derived from countries on a given week") %>%
@@ -1169,36 +1127,31 @@ server <- function(input, output) {
           hc_plotOptions(scatter = list(lineWidth = 1))%>%
           hc_colors(colorstw)
       } else {
+        x <- tbl(con, "meta") %>%
+          dplyr::filter(clean_host == "Homo sapiens") %>%
+          dplyr::mutate(clean_country = ifelse(clean_country == "USA", "United States", clean_country)) %>%
+          dplyr::filter(!is.na(clean_collection_date)) %>%
+          dplyr::filter(clean_collection_date > as.Date("2020-03-15")) %>%
+          dplyr::filter(clean_country %in% local(input$world_select_country))%>%
+          dplyr::rename(
+            country_name = "clean_country",
+            date_year = "date_isoyear",
+            date_week = "date_isoweek"
+          ) %>%
+          dplyr::select(ena_run, country_name, clean_collection_date, date_year, date_week) %>%
+          group_by(country_name, date_year, date_week) %>%
+          dplyr::summarise(weekly_sample = n()) %>%
+          # left_join(tbl(con2, "country_iso"), copy = TRUE)%>%
+          left_join(tbl(con, "ecdc_covid_country_weekly")) %>%
+          filter(ecdc_covid_country_weekly_cases != 0) %>%
+          mutate(pct = round(weekly_sample / ecdc_covid_country_weekly_cases * 100, 2)) %>%
+          dplyr::select(country_name, iso_a3, date_year, date_week, weekly_sample, ecdc_covid_country_weekly_cases, pct) %>%
+          collect()
         
-        # x <- tbl(con, "app_human_meta_mv_jhd") %>%
-        #   collect()
-        # 
-        # x <- tbl(con, "meta") %>%
-        #   dplyr::filter(clean_host == "Homo sapiens") %>%
-        #   dplyr::mutate(country = ifelse(country == "USA", "United States", country)) %>%
-        #   dplyr::filter(!is.na(clean_collection_date)) %>%
-        #   dplyr::filter(clean_collection_date > as.Date("2020-03-15")) %>%
-        #   dplyr::filter(country %in% local(input$world_select_country))%>%
-        #   dplyr::rename(
-        #     country_name = "country",
-        #     date_year = "date_isoyear",
-        #     date_week = "date_isoweek"
-        #   ) %>%
-        #   dplyr::select(ena_run, country_name, clean_collection_date, date_year, date_week) %>%
-        #   group_by(country_name, date_year, date_week) %>%
-        #   dplyr::summarise(weekly_sample = n()) %>%
-        #   # left_join(tbl(con2, "country_iso"), copy = TRUE)%>%
-        #   left_join(tbl(con, "ecdc_covid_country_weekly")) %>%
-        #   filter(cases != 0) %>%
-        #   mutate(pct = round(weekly_sample / cases * 100, 2)) %>%
-        #   dplyr::select(country_name, iso_a3, date_year, date_week, weekly_sample, cases, pct) %>%
-        #   collect()
-        # 
-        x <- app_human_meta_mv_jhd %>%
-          # mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
-          # mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = "")))%>%
-          dplyr::filter(pct>=0)%>%
-          dplyr::filter(country_name %in% input$world_select_country)
+        x <- x %>%
+          mutate(date_week_iso = ifelse(date_week < 10, str_c("0", as.character(date_week)), as.character(date_week))) %>%
+          mutate(date = ISOweek2date(paste(date_year, "-W", date_week_iso, "-1", sep = "")))%>%
+          dplyr::filter(pct>=0)
         
         highchart(type = "stock") %>%
           hc_add_series(x, "scatter", hcaes(x = date, y = pct, group = country_name),
@@ -1230,111 +1183,119 @@ server <- function(input, output) {
   
   
   
-  # output$vcf_head <- DT::renderDataTable({
-  #   DT::datatable(
-  #     {
-  #       tbl(con, "vcf") %>%
-  #         head() %>%
-  #         collect()
-  #     },
-  #     # selection = 'single',
-  #     # extensions = 'Buttons',
-  #     options = list(
-  #       lengthChange = FALSE,
-  #       paging = FALSE,
-  #       dom = "t"
-  #     )
-  #   )
-  # })
+  output$vcf_head <- DT::renderDataTable({
+    DT::datatable(
+      {
+        tbl(con, "vcf") %>%
+          head() %>%
+          collect()
+      },
+      # selection = 'single',
+      # extensions = 'Buttons',
+      options = list(
+        lengthChange = FALSE,
+        paging = FALSE,
+        dom = "t"
+      )
+    )
+  })
   
-  # output$cov_head <- DT::renderDataTable({
-  #   DT::datatable(
-  #     {
-  #       tbl(con, "cov") %>%
-  #         head() %>%
-  #         collect()
-  #     },
-  #     # selection = 'single',
-  #     # extensions = 'Buttons',
-  #     options = list(
-  #       lengthChange = FALSE,
-  #       paging = FALSE,
-  #       dom = "t"
-  #     )
-  #   )
-  # })
+  output$cov_head <- DT::renderDataTable({
+    DT::datatable(
+      {
+        tbl(con, "cov") %>%
+          head() %>%
+          collect()
+      },
+      # selection = 'single',
+      # extensions = 'Buttons',
+      options = list(
+        lengthChange = FALSE,
+        paging = FALSE,
+        dom = "t"
+      )
+    )
+  })
   
   
-  # output$lineage_def_head <- DT::renderDataTable({
-  #   DT::datatable(
-  #     {
-  #       tbl(con, "lineage_def") %>%
-  #         head() %>%
-  #         collect()
-  #     },
-  #     # selection = 'single',
-  #     # extensions = 'Buttons',
-  #     options = list(
-  #       lengthChange = FALSE,
-  #       paging = FALSE,
-  #       dom = "t"
-  #     )
-  #   )
-  # })
+  output$lineage_def_head <- DT::renderDataTable({
+    DT::datatable(
+      {
+        tbl(con, "lineage_def") %>%
+          head() %>%
+          collect()
+      },
+      # selection = 'single',
+      # extensions = 'Buttons',
+      options = list(
+        lengthChange = FALSE,
+        paging = FALSE,
+        dom = "t"
+      )
+    )
+  })
   
-  # output$lineage_head <- DT::renderDataTable({
-  #   DT::datatable(
-  #     {
-  #       tbl(con, "lineage") %>%
-  #         head() %>%
-  #         collect()
-  #     },
-  #     # selection = 'single',
-  #     # extensions = 'Buttons',
-  #     options = list(
-  #       lengthChange = FALSE,
-  #       paging = FALSE,
-  #       dom = "t"
-  #     )
-  #   )
-  # })
+  output$lineage_head <- DT::renderDataTable({
+    DT::datatable(
+      {
+        tbl(con, "lineage") %>%
+          head() %>%
+          collect()
+      },
+      # selection = 'single',
+      # extensions = 'Buttons',
+      options = list(
+        lengthChange = FALSE,
+        paging = FALSE,
+        dom = "t"
+      )
+    )
+  })
   
-  # output$meta_head <- DT::renderDataTable({
-  #   DT::datatable(
-  #     {
-  #       tbl(con, "metadata") %>%
-  #         head(2) %>%
-  #         collect()
-  #     },
-  #     # selection = 'single',
-  #     # extensions = 'Buttons',
-  #     options = list(
-  #       lengthChange = FALSE,
-  #       paging = FALSE,
-  #       dom = "t"
-  #     )
-  #   )
-  # })
-  # 
+  output$meta_head <- DT::renderDataTable({
+    DT::datatable(
+      {
+        tbl(con, "meta") %>%
+          head(2) %>%
+          collect()
+      },
+      # selection = 'single',
+      # extensions = 'Buttons',
+      options = list(
+        lengthChange = FALSE,
+        paging = FALSE,
+        dom = "t"
+      )
+    )
+  })
+  
   
   output$vcf_count <- renderInfoBox({
     infoBox(
-      title = "Analyzed", value = as.character(unique_ena_run_summary[unique_ena_run_summary$table_name=="vcf", "count"]),
-      icon = icon("circle"),
-      color = "yellow"
-    )
-  })
-
-
-  output$meta_count <- renderInfoBox({
-    infoBox(
-      title = "Submitted", value = as.character(unique_ena_run_summary[unique_ena_run_summary$table_name=="meta", "count"]),
+      title = "Samples in vcf", value = as.character(tbl(con, "unique_ena_run_summary") %>% filter(table_name == "vcf") %>% select(count) %>% collect()),
       icon = icon("circle"),
       color = "yellow"
     )
   })
   
-
+  
+  
+  output$cov_count <- renderInfoBox({
+    infoBox(
+      title = "Samples in cov", value = as.character(tbl(con, "unique_ena_run_summary") %>% filter(table_name == "cov") %>% select(count) %>% collect()),
+      icon = icon("circle"),
+      color = "yellow"
+    )
+  })
+  
+  
+  output$meta_count <- renderInfoBox({
+    infoBox(
+      title = "Samples in meta", value = as.character(tbl(con, "unique_ena_run_summary") %>% filter(table_name == "meta") %>% select(count) %>% collect()),
+      icon = icon("circle"),
+      color = "yellow"
+    )
+  })
   
   output$version <- renderInfoBox({
     infoBox(
@@ -1348,12 +1309,12 @@ server <- function(input, output) {
   
   output$distPlot_lineage_country <- renderHighchart({
     x <- app_lineage %>%
-      dplyr::filter(country == input$selected_country) %>%
-      arrange(collection_date)
+      dplyr::filter(clean_country == input$selected_country) %>%
+      arrange(clean_collection_date)
     
     
     highchart(type = "stock") %>%
-      hc_add_series(x, "scatter", hcaes(x = collection_date, y = pct, group = variant_id),
+      hc_add_series(x, "scatter", hcaes(x = clean_collection_date, y = pct, group = variant_id),
                     tooltip = list(pointFormat = "{point.n} samples from {point.variant_id} variant out of {point.n_all} ")
       ) %>%
       hc_title(text = "Percent of samples derived from a given variant detected in the countries") %>%
@@ -1372,11 +1333,11 @@ server <- function(input, output) {
   output$distPlot_lineage_lineage <- renderHighchart({
     x <- app_lineage %>%
       dplyr::filter(variant_id == input$selected_lineage) %>%
-      arrange(collection_date)
+      arrange(clean_collection_date)
     
     
     highchart(type = "stock") %>%
-      hc_add_series(x, "scatter", hcaes(x = collection_date, y = n, group = country),
+      hc_add_series(x, "scatter", hcaes(x = clean_collection_date, y = n, group = clean_country),
                     tooltip = list(pointFormat = "Number of samples {point.n}: ")
       ) %>%
       hc_title(text = "Number of samples from a given variant detected in the countries") %>%
@@ -1395,7 +1356,7 @@ server <- function(input, output) {
   
   output$variant_weekly <- renderHighchart({
     x <- variant_master_table %>%
-      dplyr::filter(country == input$selected_country_for_variants) %>%
+      dplyr::filter(country_name == input$selected_country_for_variants) %>%
       # dplyr::filter(country_name == "United Kingdom")%>%
       dplyr::arrange(date)
     
@@ -1426,166 +1387,164 @@ server <- function(input, output) {
       hc_colors(colorstw)
   })
   
-  # output$jstree <-
-  #   renderJstree(
-  #     jstree(nodes, search = FALSE, theme= "proton", multiple = FALSE, checkboxes = FALSE)
-  #   )
-  # 
-  # filtered_column_description <- reactive({
-  #   if (!length(input$jstree_selected)) {
-  #     selected_table <- "Nothing selected"
-  #   }  else {
-  #     selected_table <-input$jstree_selected[[1]]$text 
-  #   }
-  #   selected_table
-  # })
+  output$jstree <-
+    renderJstree(
+      jstree(nodes, search = FALSE, theme= "proton", multiple = FALSE, checkboxes = FALSE)
+    )
   
-  # 
-  # output$filtered_table_name<- renderText({
-  #   x <- as.character(filtered_column_description())
-  #   if (x%in%c("Nothing selected", "tables", "views", "functions")) {
-  #     x_out <- "Select a single table/view/function on the left (double click on tables/views to unfold the leaves)"
-  #   }
-  #   else {
-  #     x_out <- paste0("Name: ", x)
-  #   }
-  #   x_out
-  # })
-  # 
-  # 
-  # output$filtered_table_title<- renderText({
-  #   x <- as.character(filtered_column_description())
-  #   if (x%in%c("Nothing selected", "tables", "views", "functions")) {
-  #     x_out <- " "
-  #   }
-  #   else {
-  #     x_out <- as.character(table_description[table_description$table_name==x, 'title'])
-  #   }
-  #   x_out
-  # })  
-  # 
-  # output$filtered_table_description<- renderText({
-  #   x <- as.character(filtered_column_description())
-  #   if (x%in%c("Nothing selected", "tables", "views", "functions")) {
-  #     x_out <- " "
-  #   }
-  #   else {
-  #     x_out <- as.character(table_description[table_description$table_name==x, 'description'])
-  #   }
-  #   x_out
-  # })
-  # 
-  
-  # output$filtered_table_sql<- renderText({
-  #   
-  #   x <- as.character(filtered_column_description())
-  #   if (x%in%c("Nothing selected", "tables", "views", "functions")) {
-  #     x_out <- " "
-  #   }
-  #   else {
-  #     table_type <- tbl(con, "table_description") %>%
-  #       dplyr::filter(table_name==x)%>%
-  #       dplyr::select(type)%>%
-  #       collect()
-  #     
-  #     if (as.character(table_type)=="tables") {
-  #       x_out <- " "
-  #     }
-  #     
-  #     if (as.character(table_type)=="functions"){
-  #       sql_query <- SQL(paste0("SELECT prosrc FROM pg_catalog.pg_proc WHERE proname=\'", x, "\';"))
-  #       x_out <- as.character(dbGetQuery(con, sql_query)) 
-  #     }
-  #     
-  #     if (as.character(table_type)=="views") {
-  #       sql_query <- SQL(paste0("SELECT definition FROM pg_matviews WHERE matviewname=\'", x, "\';"))
-  #       x_out <- as.character(dbGetQuery(con, sql_query)) 
-  #     }
-  #     
-  #   }
-  #   x_out
-  #   
-  # })
-  # 
-  # output$table_selected_column_description <- DT::renderDataTable(
-  #   DT::datatable(
-  #     {
-  #       x <- as.character(filtered_column_description())
-  #       
-  #       if (x%in%c("Nothing selected", "tables", "views", "functions")) {
-  #         table_out_column_description <- tibble()}
-  #       else{
-  #         
-  #         table_type <- tbl(con, "table_description") %>%
-  #           dplyr::filter(table_name==x)%>%
-  #           dplyr::select(type)%>%
-  #           collect()
-  #         if (as.character(table_type)=="functions") {
-  #           table_out_column_description <- tibble()}          
-  #         else{
-  #           if (as.character(table_type)=="tables"){
-  #             table_out_column_description <- tbl(con, "column_description") %>%
-  #               dplyr::filter(table_name==x)%>%
-  #               collect() %>%
-  #               inner_join(dbGetQuery(con, "SELECT table_name, data_type, column_name FROM information_schema.columns WHERE table_schema='public';"))%>%
-  #               dplyr::select(column_name, data_type, description)%>%
-  #               rename("Column name"=column_name,
-  #                      "Type"=data_type,
-  #                      "Description"=description)
-  #             table_out_column_description}
-  #           
-  #           else {
-  #             url <- paste0("SELECT a.attname,
-  #               pg_catalog.format_type(a.atttypid, a.atttypmod),
-  #               a.attnotnull
-  #               FROM pg_attribute a
-  #               JOIN pg_class t on a.attrelid = t.oid
-  #               JOIN pg_namespace s on t.relnamespace = s.oid
-  #               WHERE a.attnum > 0 
-  #               AND NOT a.attisdropped
-  #               AND t.relname = \'", x, "\' --<< replace with the name of the MV 
-  #               AND s.nspname = 'public' --<< change to the schema your MV is in 
-  #               ORDER BY a.attnum;")
-  #             table_out_column_description <- tbl(con, "column_description") %>%
-  #               dplyr::filter(table_name==x)%>%
-  #               collect() %>%
-  #               inner_join(dbGetQuery(con, url), by=c("column_name"="attname"))%>%
-  #               dplyr::select(column_name, format_type, description)%>%
-  #               rename("Column name"=column_name,
-  #                      "Type"=format_type,
-  #                      "Description"=description)
-  #             table_out_column_description
-  #           }
-  #           
-  #           
-  #         }
-  #         
-  #         
-  #         
-  #       }
-  #       
-  #     },
-  #     
-  #     # selection = 'single',
-  #     # extensions = 'Buttons',
-  #     # filter = 'top',
-  #     options = list(
-  #       lengthChange = FALSE,
-  #       paging = FALSE,
-  #       dom = "t"
-  #     )
-  #   ),
-  # )
-  # 
+  filtered_column_description <- reactive({
+    if (!length(input$jstree_selected)) {
+      selected_table <- "Nothing selected"
+    }  else {
+      selected_table <-input$jstree_selected[[1]]$text 
+    }
+    selected_table
+  })
   
   
+  output$filtered_table_name<- renderText({
+    x <- as.character(filtered_column_description())
+    if (x%in%c("Nothing selected", "tables", "views", "functions")) {
+      x_out <- "Select a single table/view/function on the left (double click on tables/views to unfold the leaves)"
+    }
+    else {
+      x_out <- paste0("Name: ", x)
+    }
+    x_out
+  })
+
+  
+  output$filtered_table_title<- renderText({
+    x <- as.character(filtered_column_description())
+    if (x%in%c("Nothing selected", "tables", "views", "functions")) {
+      x_out <- " "
+    }
+    else {
+      x_out <- as.character(table_description[table_description$table_name==x, 'title'])
+    }
+    x_out
+  })  
+  
+  output$filtered_table_description<- renderText({
+    x <- as.character(filtered_column_description())
+    if (x%in%c("Nothing selected", "tables", "views", "functions")) {
+      x_out <- " "
+    }
+    else {
+      x_out <- as.character(table_description[table_description$table_name==x, 'description'])
+    }
+    x_out
+  })
+  
+  
+  output$filtered_table_sql<- renderText({
+    
+    x <- as.character(filtered_column_description())
+    if (x%in%c("Nothing selected", "tables", "views", "functions")) {
+      x_out <- " "
+    }
+    else {
+      table_type <- tbl(con, "table_description") %>%
+        dplyr::filter(table_name==x)%>%
+        dplyr::select(type)%>%
+        collect()
+      
+      if (as.character(table_type)=="tables") {
+        x_out <- " "
+      }
+      
+      if (as.character(table_type)=="functions"){
+        sql_query <- SQL(paste0("SELECT prosrc FROM pg_catalog.pg_proc WHERE proname=\'", x, "\';"))
+        x_out <- as.character(dbGetQuery(con, sql_query)) 
+      }
+      
+      if (as.character(table_type)=="views") {
+        sql_query <- SQL(paste0("SELECT definition FROM pg_matviews WHERE matviewname=\'", x, "\';"))
+        x_out <- as.character(dbGetQuery(con, sql_query)) 
+      }
+
+    }
+    x_out
+
+  })
+  
+  output$table_selected_column_description <- DT::renderDataTable(
+    DT::datatable(
+      {
+        x <- as.character(filtered_column_description())
+
+        if (x%in%c("Nothing selected", "tables", "views", "functions")) {
+          table_out_column_description <- tibble()}
+        else{
+
+          table_type <- tbl(con, "table_description") %>%
+            dplyr::filter(table_name==x)%>%
+            dplyr::select(type)%>%
+            collect()
+          if (as.character(table_type)=="functions") {
+            table_out_column_description <- tibble()}          
+          else{
+           if (as.character(table_type)=="tables"){
+            table_out_column_description <- tbl(con, "column_description") %>%
+              dplyr::filter(table_name==x)%>%
+              collect() %>%
+              inner_join(dbGetQuery(con, "SELECT table_name, data_type, column_name FROM information_schema.columns WHERE table_schema='public';"))%>%
+              dplyr::select(column_name, data_type, description)%>%
+              rename("Column name"=column_name,
+                     "Type"=data_type,
+                     "Description"=description)
+            table_out_column_description}
+          
+           else {
+            url <- paste0("SELECT a.attname,
+                pg_catalog.format_type(a.atttypid, a.atttypmod),
+                a.attnotnull
+                FROM pg_attribute a
+                JOIN pg_class t on a.attrelid = t.oid
+                JOIN pg_namespace s on t.relnamespace = s.oid
+                WHERE a.attnum > 0 
+                AND NOT a.attisdropped
+                AND t.relname = \'", x, "\' --<< replace with the name of the MV 
+                AND s.nspname = 'public' --<< change to the schema your MV is in 
+                ORDER BY a.attnum;")
+            table_out_column_description <- tbl(con, "column_description") %>%
+              dplyr::filter(table_name==x)%>%
+              collect() %>%
+              inner_join(dbGetQuery(con, url), by=c("column_name"="attname"))%>%
+              dplyr::select(column_name, format_type, description)%>%
+              rename("Column name"=column_name,
+                   "Type"=format_type,
+                   "Description"=description)
+            table_out_column_description
+            }
+            
+   
+          }
+
+            
+         
+        }
+
+      },
+
+      # selection = 'single',
+      # extensions = 'Buttons',
+      # filter = 'top',
+      options = list(
+        lengthChange = FALSE,
+        paging = FALSE,
+        dom = "t"
+      )
+    ),
+  )
+
+  
+
   
   output$table <- DT::renderDataTable(
     DT::datatable(
       {
-        lineage_def_data %>%
-          distinct (variant_id, .keep_all = TRUE) %>%
-          select (variant_id, pango, description) %>%
+        app_lineage_def_description %>%
           dplyr::filter(variant_id == input$selected_lineage)
       },
       
