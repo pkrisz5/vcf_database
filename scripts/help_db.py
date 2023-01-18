@@ -39,6 +39,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--list_tables", action = "store_true", help = "list tables")
     parser.add_argument("-i", "--list_indexes", action = "store_true", help = "list indexes")
+    parser.add_argument("-C", "--summary", action = "store_true", help = "summarize snapshots")
     parser.add_argument("-v", "--list_materialized_views", action = "store_true", help = "list materialized_views")
     parser.add_argument("-c", "--count", type = str, help = "count records in the table")
     parser.add_argument("-s", "--schema", type = str, help = "describe columns of the table")
@@ -56,6 +57,23 @@ if __name__ == '__main__':
             )
     print ("connected to db {0}".format(db), file = sys.stderr)
     try:
+        if args.summary:
+            statement = """
+select foo.snapshot, foo.count as "count coverage", foo.load_start, foo.load_duration, bar.count as "count vcf", bar.load_start, bar.load_duration 
+from (
+select uc."snapshot" as snapshot, count(*), min(uc.insertion_ts) as load_start, max(uc.insertion_ts)-min(uc.insertion_ts) as load_duration
+from datahub_0.unique_cov uc 
+group by uc."snapshot" 
+) as foo
+full outer join (
+select uv."snapshot" as snapshot, count(*), min(uv.insertion_ts) as load_start, max(uv.insertion_ts)-min(uv.insertion_ts) as load_duration
+from datahub_0.unique_vcf uv 
+group by uv."snapshot" 
+) as bar
+on foo.snapshot = bar.snapshot
+order by foo.load_start
+            """
+            db_exec(con, statement, False, True)
 
         if args.list_indexes:
             statement = """

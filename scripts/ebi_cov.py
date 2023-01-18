@@ -5,9 +5,24 @@ import tarfile
 import pandas
 import psycopg2
 import datetime
+from common import Map, uniq
 
+def bulk_insert(tables, conn, C, snapshot, COV, uniq, cnt):
+    pipe = io.StringIO()
+    status = pandas.DataFrame(
+        columns = ('timestamp', 'ena_run', 'integrity'),
+        data = uniq
+    )
+    status['snapshot'] = snapshot
+        
+    status[['ena_run', 'timestamp', 'snapshot', 'integrity']].to_csv(
+        pipe, sep = '\t', header = False, index = False
+    )
+    pipe.seek(0)
+    print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
+    C.copy_expert(f"COPY {tables['t_unique']} FROM STDIN", pipe)
+    pipe.close()
 
-def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
     COVC = pandas.concat(COV)
     print ("{0} pushing {1} records in db".format(datetime.datetime.now(), COVC.shape[0]))
     pipe = io.StringIO()
@@ -21,25 +36,6 @@ def bulk_insert(skip_commit, tables, conn, C, snapshot, COV, uniq, cnt):
         del cov
     del COVC
     pipe.close()
-
-    pipe = io.StringIO()
-    status = pandas.DataFrame(
-        columns = ('timestamp', 'ena_run', 'integrity'),
-        data = uniq
-    )
-    status['snapshot'] = snapshot
-        
-    status[['timestamp', 'snapshot', 'ena_run', 'integrity']].to_csv(
-        pipe, sep = '\t', header = False, index = False
-    )
-    pipe.seek(0)
-    print ("{0} pushing {1} unique records in db".format(datetime.datetime.now(), cnt))
-    C.copy_expert(f"COPY {tables['t_meta']} FROM STDIN", pipe)
-    pipe.close()
-
-    if not skip_commit:
-        conn.commit()
-    del pipe
 
 
 if __name__ == '__main__':
@@ -60,6 +56,8 @@ if __name__ == '__main__':
                      help = "database user", default = os.getenv('SECRET_USERNAME'))
     parser.add_argument("-p", "--password", action = "store",
                      help = "database password", default = os.getenv('SECRET_PASSWORD'))
+    parser.add_argument("-r", "--runid_table_name", action = "store",
+                     help = "the ena run_id map table", default = 'runid')
     parser.add_argument("-f", "--filter_coverage_upper_threshold", action = "store",
                      help = "keep only those positions where the coverage value is below the threshold", default = 100)
     parser.add_argument("-b", "--batch_size", action = "store",
@@ -68,8 +66,6 @@ if __name__ == '__main__':
                      help = "the name of the target coverage table in the database", default = 'cov')
     parser.add_argument("-m", "--covunique_table_name", action = "store",
                      help = "the name of the target cov unique table in the database", default = 'unique_cov')
-    parser.add_argument("-F", "--commit_when_finished", action = "store_true",
-                     help = "commit transaction only in the very end")
     args = parser.parse_args()
 
     assert os.path.exists(args.input), "File not found error: {0}".format(args.input)
@@ -77,8 +73,9 @@ if __name__ == '__main__':
 
 
     tables = {
+        't_runid': "{}.{}".format(args.schema, args.runid_table_name),
         't_cov': "{}.{}".format(args.schema, args.cov_table_name),
-        't_meta': "{}.{}".format(args.schema, args.covunique_table_name),
+        't_unique': "{}.{}".format(args.schema, args.covunique_table_name),
     }
 
     conn = psycopg2.connect(
@@ -86,12 +83,16 @@ if __name__ == '__main__':
         host = args.server,
         port = args.port,
         user = args.user,
-        password = args.password        
+        password = args.password,
+        application_name = f'ebi_cov.py run by {args.user}',
     )
     C = conn.cursor()
     print ("{0} connected to db engine to use db {1}".format(datetime.datetime.now(), args.database))
 
     snapshot = args.snapshot if args.snapshot else extract_ena_run(args.input)
+
+    the_map = Map(conn, C, tables['t_runid'])
+    uniq_before = uniq(conn, tables['t_unique'])
 
     T = tarfile.open(args.input)
     print ("{0} open tar file {1}, snapshot: {2}".format(datetime.datetime.now(), args.input, snapshot))
@@ -111,10 +112,14 @@ if __name__ == '__main__':
         if not ti.isfile():
             continue
 
-        counter += 1
         now = datetime.datetime.now()
+        runid = the_map.get_id( extract_ena_run(ti.name) )
+        if runid in uniq_before:
+            print ("{0} DUPLICATE file name {1} -> ena_run {2} is not new".format(now, ti.name, runid))
+            continue
+
+        counter += 1
         ts.append( now.isoformat() )
-        runid = extract_ena_run(ti.name)
         ena_run.append( runid )
         #print ("{0} start to process {1}, ena_run {2}".format(now, ti.name, runid))
     
@@ -155,8 +160,9 @@ if __name__ == '__main__':
         COV.append(cov)
 
         if counter == args.batch_size:
+            the_map.insert()
             uniq = zip(ts, ena_run, integrity)
-            bulk_insert(args.commit_when_finished, tables, conn, C, snapshot, COV, uniq, counter)
+            bulk_insert(tables, conn, C, snapshot, COV, uniq, counter)
             counter = 0
             COV = []
             ts = []
@@ -164,12 +170,11 @@ if __name__ == '__main__':
             integrity = []
     
     if counter:
+        the_map.insert()
         uniq = zip(ts, ena_run, integrity)
-        bulk_insert(args.commit_when_finished, tables, conn, C, snapshot, COV, uniq, counter)
+        bulk_insert(tables, conn, C, snapshot, COV, uniq, counter)
 
-    if args.commit_when_finished:
-        conn.commit()
-
+    conn.commit()
     
     C.close()
     conn.close()
