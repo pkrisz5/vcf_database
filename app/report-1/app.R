@@ -17,7 +17,7 @@ library(shinyWidgets)
 library(shinybusy)
 library(glue)
 
-app_version <- "v_browser_003.012"
+app_version <- "v_browser_003.016"
 
 # Connection details
 
@@ -197,7 +197,7 @@ collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
           GROUP BY runid
   ),
   aa AS (
-      SELECT *
+      SELECT DISTINCT runid, hgvs_p, country_name, ena_run, collection_date
       FROM aa_mutation_
           WHERE (NOT hgvs_p IN ({exclusion*}))
            AND (hgvs_p IN ( {variants*}))
