@@ -1,4 +1,3 @@
-
 library(shiny)
 library(DBI)
 library(shinydashboard)
@@ -18,7 +17,7 @@ library(shinyWidgets)
 library(shinybusy)
 library(glue)
 
-app_version <- "v_browser_003.010"
+app_version <- "v_browser_003.016"
 
 # Connection details
 
@@ -169,6 +168,93 @@ collect_selected_variant <- function(con, variants, exclusion=c("")) {
   return(list(table1=d1,table2=d2))
 }
 
+
+collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
+  # variants <- c("D80A"="p.Asp80Ala",
+  #               "D215G"="p.Asp215Gly",
+  #               #"LAL242-244del"="p.Ala243_Leu244del", #seems like these variants are not called correctly
+  #               #"R246I"="p.Arg246Ile", #seems like these variants are not called correctly
+  #               "K417N"="p.Lys417Asn",
+  #               "E484K"="p.Glu484Lys",
+  #               "N501Y"="p.Asn501Tyr",
+  #               "D614G"="p.Asp614Gly",
+  #               "A701V"="p.Ala701Val")
+  n_variants <- length(variants)
+  variants_exclusion <- str_c(variants, ", ", exclusion, collapse = TRUE)
+  aa_pos <- as.integer(str_sub(strsplit(str_remove_all(variants_exclusion, pattern = " "), ",")[[1]],  start = 6, end = -4))
+  sql_query1 <-glue_sql("
+  DROP TABLE IF EXISTS temp1; 
+  
+  WITH small_cov_s_pos AS (
+     SELECT *
+     FROM cov_s_pos
+     --LIMIT 10000000000
+  ),
+  neg_select AS (
+        SELECT runid
+          FROM small_cov_s_pos
+          WHERE pos_aa IN ({aa_pos*})
+          GROUP BY runid
+  ),
+  aa AS (
+      SELECT DISTINCT runid, hgvs_p, country_name, ena_run, collection_date
+      FROM aa_mutation_
+          WHERE (NOT hgvs_p IN ({exclusion*}))
+           AND (hgvs_p IN ( {variants*}))
+     --LIMIT 100000
+  
+  ),
+  
+  aa2 AS (
+    SELECT *
+     FROM aa
+      LEFT JOIN neg_select ON aa.runid = neg_select.runid
+      WHERE neg_select.runid IS NULL
+          -- LIMIT 100000
+  )
+  
+  SELECT max(country_name) as country, ena_run, count(country_name), collection_date
+  INTO TEMP temp1
+   FROM aa2
+     GROUP BY ena_run, collection_date
+     HAVING count(ena_run) = {n_variants}
+  --limit 100
+;
+
+    SELECT country, count(*)
+      FROM  temp1
+      GROUP BY country; 
+
+        ", .con = con)
+  
+  sql_query2 <-glue_sql("
+    WITH temp2 AS (
+        SELECT *
+	        FROM test_background_sample_counts tbsc 
+	        WHERE collection_date > date ('2019-04-24') 
+    ),
+    temp3 AS (
+    SELECT temp1.collection_date as collection_date, temp1.country as country, count(*)
+      FROM  temp1
+      GROUP BY country, collection_date
+    )
+    
+    SELECT temp2.collection_date, temp2.country, temp2.count-coalesce(temp3.count, 0) AS other_count, coalesce(temp3.count, 0) AS variant_count 
+      FROM temp2
+      LEFT JOIN temp3 USING (collection_date, country) 
+    
+    
+    ; 
+    ", .con = con)
+  
+  d1 <- dbGetQuery(con, sql_query1)
+  d2 <- dbGetQuery(con, sql_query2)
+  return(list(table1=d1,table2=d2))
+}
+
+
+
+
 convert_aa_1_to_3 <- function(aa_1){
   str_replace_all(aa_1, c("^D$" = "Asp",
                           "^A$" = "Ala",
@@ -224,7 +310,7 @@ ui <- dashboardPage(
   ),
   
   dashboardBody(
-    add_busy_spinner(spin = "fading-circle", position = "bottom-right", timeout = 1000),
+    add_busy_spinner(spin = "fading-circle", position = "top-right", timeout = 1000),
     tags$head(tags$style(HTML('
       .content-wrapper {
         background-color: #ffffff;
@@ -472,8 +558,40 @@ ui <- dashboardPage(
               
               column(
                 width = 9,
-                textInput("included_mutation_list", label = h4("Included mutations"), value = "D80A, D215G, K417N, E484K, N501Y, D614G, A701V"),
-                textInput("excluded_mutation_list", label = h4("Excluded mutations"), value = ""),
+                strong("With the custom variant search it is posssible to select samples those contains or do not contains some predefined mutations"),
+                checkboxInput("only_high_cov",
+                              label = span("Exclude samples with low sequencing depth (this may take several minutes)", bsButton("q_h_cov", label = "", icon = icon("info-circle"), style = "secondary", size = "small")),
+                              value = FALSE
+                ),
+                bsPopover(
+                  id = "q_h_cov", title = "Exclude samples with low sequencing depth (by clicking this the process may take longer eg. >10min",
+                  content = paste0("If you check this box then only those samples will be included where sequensing depth is higher than 30 by each selected positions"),
+                  trigger = "hover",
+                  options = list(container = "body")
+                ),
+                
+                textInput("included_mutation_list",
+                          #label = h4("Included mutations"),
+                          label = span("Included mutations", bsButton("q_inlc_mut", label = "", icon = icon("info-circle"), style = "secondary", size = "small")),
+                          value = "D80A, D215G, K417N, E484K, N501Y, D614G, A701V"),
+                bsPopover(
+                  id = "q_inlc_mut", title = "Included mutations",
+                  content = paste0("List of mutations in S protein that needs to be present in the sample. Use single letter amino acid signs and position in the S protein. Separate mutations with comma."),
+                  trigger = "hover",
+                  options = list(container = "body")
+                ),
+                textInput("excluded_mutation_list",
+                          #label = h4("Excluded mutations"),
+                          label = span("Excluded mutations", bsButton("q_excl_mut", label = "", icon = icon("info-circle"), style = "secondary", size = "small")),
+                          value = ""),
+                bsPopover(
+                  id = "q_excl_mut", title = "Excluded mutations",
+                  content = paste0("List of mutations in S protein those are NOT present in the sample. Use single letter amino acid signs and position in the S protein. Separate mutations with comma."),
+                  trigger = "hover",
+                  options = list(container = "body")
+                ),
+                
+                
                 actionButton("run_custom_variant", "Run custom variant search", icon("refresh"), class = "btn btn-warning" )
                 
                 
@@ -505,6 +623,7 @@ ui <- dashboardPage(
       tabItem(
         tabName = "menu_info",
         fluidRow(
+          textOutput("keepAlive"), # This need to stop fade away the app
           tags$h3("Overview"), br(),
           infoBoxOutput("version"), br(), br(), br(), br(), br(),
           tags$h4("Number of samples"), br(),
@@ -516,7 +635,7 @@ ui <- dashboardPage(
     ),
     
     ## Other
-    
+    # Note: the <script> below does not let the app fade away after 1 min
     tags$head(tags$style(HTML("
         /* navbar (rest of the header) */
         .skin-blue .main-header .navbar {
@@ -571,7 +690,23 @@ ui <- dashboardPage(
            /* main section  */                    
          .skin-blue .content .btn_sm{
                               background-color: #ffffff;
-                              }
+         }
+                              
+                              
+          <script>
+          var socket_timeout_interval
+          var n = 0
+          $(document).on('shiny:connected', function(event) {
+          socket_timeout_interval = setInterval(function(){
+          Shiny.onInputChange('count', n++)
+          }, 15000)
+          });
+          $(document).on('shiny:disconnected', function(event) {
+          clearInterval(socket_timeout_interval)
+          });
+          </script>                    
+                              
+                              
                               ")
     )
     )
@@ -583,6 +718,12 @@ ui <- dashboardPage(
 ############################################################################################
 
 server <- function(input, output) {
+     
+  output$keepAlive <- renderText({
+          req(input$count)
+          paste("keep alive ", input$count)
+     })     
+     
   output$eu_map <- renderHighchart({
     map <- jsonlite::fromJSON(txt = "eugeo.json", simplifyVector = FALSE)
     if (input$relative_to_population_eu) {
@@ -1030,13 +1171,19 @@ server <- function(input, output) {
   custom_variant_tables <- eventReactive(input$run_custom_variant, {
     incl <- convert_mut_1_to_3(input$included_mutation_list)
     excl <- convert_mut_1_to_3(input$excluded_mutation_list)
-   
+    
     #incl <- strsplit(str_remove_all(input$included_mutation_list, pattern = " "), ",")[[1]]
     #excl <- strsplit(str_remove_all(input$excluded_mutation_list, pattern = " "), ",")[[1]]
     if (is_empty(incl)) incl <- c("p.Asp80Ala", "p.Asp215Gly", "p.Lys417Asn", "p.Glu484Lys", "p.Asn501Tyr", "p.Asp614Gly", "p.Ala701Val")
     if (is_empty(excl)) excl <- ""
     #x_all <- collect_selected_variant(con, variants)
-    x <- collect_selected_variant(con, variants = incl, exclusion = excl)
+    #x <- collect_selected_variant(con, variants = incl, exclusion = excl)
+    
+    
+    if (input$only_high_cov) x <- collect_selected_variant_with_cov(con, variants = incl, exclusion = excl) else x <- collect_selected_variant(con, variants = incl, exclusion = excl)
+    
+    
+    
     x
   })
   
@@ -1194,7 +1341,7 @@ server <- function(input, output) {
   output$custom_variant_table <- DT::renderDataTable(
     DT::datatable(
       { custom_variant_tables()$table1 %>%
-           arrange(desc(count))
+          arrange(desc(count))
       },
       colnames = c('Country', 'Count'),
       selection = 'single',
@@ -1213,7 +1360,7 @@ server <- function(input, output) {
       s <- input$custom_variant_table_rows_selected
       if (!length(s)) s = 1
       y <- custom_variant_tables()$table1  %>%
-         arrange(desc(count))
+        arrange(desc(count))
       
       ss <- as.character(y[s, 'country'])
       if (!length(s)) 
