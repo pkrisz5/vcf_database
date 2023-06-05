@@ -16,8 +16,7 @@ library(jsTreeR)
 library(shinyWidgets)
 library(shinybusy)
 library(glue)
-
-app_version <- "v_browser_003.017"
+app_version <- "v_browser_003.019"
 
 # Connection details
 
@@ -117,139 +116,170 @@ makeNodes <- function(leaves){
 
 collect_selected_variant <- function(con, variants, exclusion=c("")) {
      
-     n_variants <- length(variants)
      sql_query1 <-glue_sql("
-  DROP TABLE IF EXISTS temp1; 
-   -- DROP TABLE IF EXISTS temp2; 
-   
-
-   WITH x1 AS (
-     SELECT DISTINCT runid, hgvs_p, country_name, ena_run, collection_date
-      FROM aa_mutation_
-          WHERE (NOT hgvs_p IN ({exclusion*}))
-           AND (hgvs_p IN ( {variants*}))
-   )
-  
-    SELECT max(country_name) as country, ena_run, count(country_name), collection_date
-       INTO TEMP temp1
-        FROM x1
-          GROUP BY ena_run, collection_date
-           HAVING count(ena_run) = {n_variants};
-       
-    SELECT country, count(*)
-      FROM  temp1
-      GROUP BY country; 
-    ", .con = con)
+  CALL filter_custom_browser( {variants*}, {exclusion*});
+  select * from filter_country_count() ", .con = con)
      
      sql_query2 <-glue_sql("
-    WITH temp2 AS (
-        SELECT *
-	        FROM test_background_sample_counts tbsc 
-	        WHERE collection_date > date ('2019-04-24') 
-    ),
-    temp3 AS (
-    SELECT temp1.collection_date as collection_date, temp1.country as country, count(*)
-      FROM  temp1
-      GROUP BY country, collection_date
-    )
-    
-    SELECT temp2.collection_date, temp2.country, temp2.count-coalesce(temp3.count, 0) AS other_count, coalesce(temp3.count, 0) AS variant_count 
-      FROM temp2
-      LEFT JOIN temp3 USING (collection_date, country) 
-    
-    
-    ; 
-    ", .con = con)
+  
+  select * from filter_country_count_time() ", .con = con)
      
      d1 <- dbGetQuery(con, sql_query1)
      d2 <- dbGetQuery(con, sql_query2)
      return(list(table1=d1,table2=d2))
 }
-
-
 
 collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
-     # variants <- c("D80A"="p.Asp80Ala",
-     #               "D215G"="p.Asp215Gly",
-     #               #"LAL242-244del"="p.Ala243_Leu244del", #seems like these variants are not called correctly
-     #               #"R246I"="p.Arg246Ile", #seems like these variants are not called correctly
-     #               "K417N"="p.Lys417Asn",
-     #               "E484K"="p.Glu484Lys",
-     #               "N501Y"="p.Asn501Tyr",
-     #               "D614G"="p.Asp614Gly",
-     #               "A701V"="p.Ala701Val")
-     n_variants <- length(variants)
-     variants_exclusion <- str_c(variants, ", ", exclusion, collapse = TRUE)
-     aa_pos <- as.integer(str_sub(strsplit(str_remove_all(variants_exclusion, pattern = " "), ",")[[1]],  start = 6, end = -4))
+     
      sql_query1 <-glue_sql("
-  DROP TABLE IF EXISTS temp1; 
-  
-  WITH small_cov_s_pos AS (
-     SELECT *
-     FROM cov_s_pos
-     --LIMIT 10000000000
-  ),
-  neg_select AS (
-        SELECT runid
-          FROM small_cov_s_pos
-          WHERE pos_aa IN ({aa_pos*})
-          GROUP BY runid
-  ),
-  aa AS (
-      SELECT DISTINCT runid, hgvs_p, country_name, ena_run, collection_date
-      FROM aa_mutation_
-          WHERE (NOT hgvs_p IN ({exclusion*}))
-           AND (hgvs_p IN ( {variants*}))
-     --LIMIT 100000
-  
-  ),
-  
-  aa2 AS (
-    SELECT *
-     FROM aa
-      LEFT JOIN neg_select ON aa.runid = neg_select.runid
-      WHERE neg_select.runid IS NULL
-          -- LIMIT 100000
-  )
-  
-  SELECT max(country_name) as country, ena_run, count(country_name), collection_date
-  INTO TEMP temp1
-   FROM aa2
-     GROUP BY ena_run, collection_date
-     HAVING count(ena_run) = {n_variants}
-  --limit 100
-;
-
-    SELECT country, count(*)
-      FROM  temp1
-      GROUP BY country; 
-
-        ", .con = con)
+  CALL filter_custom_browser_cov( {variants*}, {exclusion*});
+  select * from filter_country_count() ", .con = con)
      
      sql_query2 <-glue_sql("
-    WITH temp2 AS (
-        SELECT *
-	        FROM test_background_sample_counts tbsc 
-	        WHERE collection_date > date ('2019-04-24') 
-    ),
-    temp3 AS (
-    SELECT temp1.collection_date as collection_date, temp1.country as country, count(*)
-      FROM  temp1
-      GROUP BY country, collection_date
-    )
-    
-    SELECT temp2.collection_date, temp2.country, temp2.count-coalesce(temp3.count, 0) AS other_count, coalesce(temp3.count, 0) AS variant_count 
-      FROM temp2
-      LEFT JOIN temp3 USING (collection_date, country) 
-    
-    
-    ; 
-    ", .con = con)
+  select * from filter_country_count_time() ", .con = con)
      
      d1 <- dbGetQuery(con, sql_query1)
      d2 <- dbGetQuery(con, sql_query2)
      return(list(table1=d1,table2=d2))
 }
+
+
+
+# collect_selected_variant <- function(con, variants, exclusion=c("")) {
+#      
+#      n_variants <- length(variants)
+#      sql_query1 <-glue_sql("
+#   DROP TABLE IF EXISTS temp1; 
+#    -- DROP TABLE IF EXISTS temp2; 
+#    
+# 
+#    WITH x1 AS (
+#      SELECT DISTINCT runid, hgvs_p, country_name, ena_run, collection_date
+#       FROM aa_mutation_
+#           WHERE (NOT hgvs_p IN ({exclusion*}))
+#            AND (hgvs_p IN ( {variants*}))
+#    )
+#   
+#     SELECT max(country_name) as country, ena_run, count(country_name), collection_date
+#        INTO TEMP temp1
+#         FROM x1
+#           GROUP BY ena_run, collection_date
+#            HAVING count(ena_run) = {n_variants};
+#        
+#     SELECT country, count(*)
+#       FROM  temp1
+#       GROUP BY country; 
+#     ", .con = con)
+#      
+#      sql_query2 <-glue_sql("
+#     WITH temp2 AS (
+#         SELECT *
+# 	        FROM test_background_sample_counts tbsc 
+# 	        WHERE collection_date > date ('2019-04-24') 
+#     ),
+#     temp3 AS (
+#     SELECT temp1.collection_date as collection_date, temp1.country as country, count(*)
+#       FROM  temp1
+#       GROUP BY country, collection_date
+#     )
+#     
+#     SELECT temp2.collection_date, temp2.country, temp2.count-coalesce(temp3.count, 0) AS other_count, coalesce(temp3.count, 0) AS variant_count 
+#       FROM temp2
+#       LEFT JOIN temp3 USING (collection_date, country) 
+#     
+#     
+#     ; 
+#     ", .con = con)
+#      
+#      d1 <- dbGetQuery(con, sql_query1)
+#      d2 <- dbGetQuery(con, sql_query2)
+#      return(list(table1=d1,table2=d2))
+# }
+
+
+
+# collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
+#      # variants <- c("D80A"="p.Asp80Ala",
+#      #               "D215G"="p.Asp215Gly",
+#      #               #"LAL242-244del"="p.Ala243_Leu244del", #seems like these variants are not called correctly
+#      #               #"R246I"="p.Arg246Ile", #seems like these variants are not called correctly
+#      #               "K417N"="p.Lys417Asn",
+#      #               "E484K"="p.Glu484Lys",
+#      #               "N501Y"="p.Asn501Tyr",
+#      #               "D614G"="p.Asp614Gly",
+#      #               "A701V"="p.Ala701Val")
+#      n_variants <- length(variants)
+#      variants_exclusion <- str_c(variants, ", ", exclusion, collapse = TRUE)
+#      aa_pos <- as.integer(str_sub(strsplit(str_remove_all(variants_exclusion, pattern = " "), ",")[[1]],  start = 6, end = -4))
+#      sql_query1 <-glue_sql("
+#   DROP TABLE IF EXISTS temp1; 
+#   
+#   WITH small_cov_s_pos AS (
+#      SELECT *
+#      FROM cov_s_pos
+#      --LIMIT 10000000000
+#   ),
+#   neg_select AS (
+#         SELECT runid
+#           FROM small_cov_s_pos
+#           WHERE pos_aa IN ({aa_pos*})
+#           GROUP BY runid
+#   ),
+#   aa AS (
+#       SELECT DISTINCT runid, hgvs_p, country_name, ena_run, collection_date
+#       FROM aa_mutation_
+#           WHERE (NOT hgvs_p IN ({exclusion*}))
+#            AND (hgvs_p IN ( {variants*}))
+#      --LIMIT 100000
+#   
+#   ),
+#   
+#   aa2 AS (
+#     SELECT *
+#      FROM aa
+#       LEFT JOIN neg_select ON aa.runid = neg_select.runid
+#       WHERE neg_select.runid IS NULL
+#           -- LIMIT 100000
+#   )
+#   
+#   SELECT max(country_name) as country, ena_run, count(country_name), collection_date
+#   INTO TEMP temp1
+#    FROM aa2
+#      GROUP BY ena_run, collection_date
+#      HAVING count(ena_run) = {n_variants}
+#   --limit 100
+# ;
+# 
+#     SELECT country, count(*)
+#       FROM  temp1
+#       GROUP BY country; 
+# 
+#         ", .con = con)
+#      
+#      sql_query2 <-glue_sql("
+#     WITH temp2 AS (
+#         SELECT *
+# 	        FROM test_background_sample_counts tbsc 
+# 	        WHERE collection_date > date ('2019-04-24') 
+#     ),
+#     temp3 AS (
+#     SELECT temp1.collection_date as collection_date, temp1.country as country, count(*)
+#       FROM  temp1
+#       GROUP BY country, collection_date
+#     )
+#     
+#     SELECT temp2.collection_date, temp2.country, temp2.count-coalesce(temp3.count, 0) AS other_count, coalesce(temp3.count, 0) AS variant_count 
+#       FROM temp2
+#       LEFT JOIN temp3 USING (collection_date, country) 
+#     
+#     
+#     ; 
+#     ", .con = con)
+#      
+#      d1 <- dbGetQuery(con, sql_query1)
+#      d2 <- dbGetQuery(con, sql_query2)
+#      return(list(table1=d1,table2=d2))
+# }
 
 
 
@@ -1179,8 +1209,7 @@ server <- function(input, output) {
           #x <- collect_selected_variant(con, variants = incl, exclusion = excl)
           
           
-          if (input$only_high_cov) x <- collect_selected_variant_with_cov(con, variants = incl, exclusion = excl) else x <- collect_selected_variant(con, variants = incl, exclusion = excl)
-          
+          if (input$only_high_cov) x <- collect_selected_variant_with_cov(con = con, variants=str_c(incl, collapse =  ","), exclusion=str_c(excl, collapse =  ",")) else x <- collect_selected_variant(con = con, variants=str_c(incl, collapse =  ","), exclusion=str_c(excl, collapse =  ","))
           
           
           x
