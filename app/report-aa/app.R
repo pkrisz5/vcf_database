@@ -17,12 +17,17 @@ library(shinyWidgets)
 library(shinybusy)
 library(glue)
 library(jsonlite)
+library(curl)
+library(RCurl)
+
 # The custom variant part needs to be rewritten!!!! The data is false now!
 app_version <- "v_browser_005.003"
 
+# read config
+config <- config::get()
+
 # Connection details
 
-# config <- config::get()
 # con <- dbPool(
 #      drv = RPostgreSQL::PostgreSQL(),
 #      dbname = config$dbname,
@@ -37,8 +42,36 @@ app_version <- "v_browser_005.003"
 #      poolClose(con)
 # })
 
-url <- "http://157.181.172.113:8080"
 
+###########################################
+# authorization
+
+aa <- function (u, si) {
+    # username:PRE_AUTH
+    u <- base64(paste(u, ":PRE_AUTH", sep = ""))
+
+    h <- new_handle()
+
+    handle_setheaders(h,
+        "Authorization" = paste("Basic", u),
+        "SESSION_ID" = si,
+        "X-Requested-With" = "XMLHttpRequest"
+    )
+
+    con <- curl(config$url_aa, handle = h)
+
+    # test what is back
+
+    back <- tryCatch({
+            (jsonlite::fromJSON(readLines(con, warn=FALSE))$SESSION_ID == si)
+        }, error = function(cond){
+            return (FALSE)
+        })
+    return (back)
+}
+##############################################
+
+url <- config$url_api
 
 d.load_custom <- function (url, endpoint, param = "", schema = "&schema_key=public"){
      jsonlite::fromJSON(txt = paste(url, "/", endpoint, "/", param, schema, sep=""))
