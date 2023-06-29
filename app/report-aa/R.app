@@ -16,24 +16,40 @@ library(jsTreeR)
 library(shinyWidgets)
 library(shinybusy)
 library(glue)
-app_version <- "v_browser_003.019"
+library(jsonlite)
+# The custom variant part needs to be rewritten!!!! The data is false now!
+app_version <- "v_browser_005.003"
 
 # Connection details
 
-config <- config::get()
-con <- dbPool(
-     drv = RPostgreSQL::PostgreSQL(),
-     dbname = config$dbname,
-     host = config$host,
-     port = config$port,
-     user = config$user,
-     password = config$password,
-     option = config$option
-)
+# config <- config::get()
+# con <- dbPool(
+#      drv = RPostgreSQL::PostgreSQL(),
+#      dbname = config$dbname,
+#      host = config$host,
+#      port = config$port,
+#      user = config$user,
+#      password = config$password,
+#      option = config$option
+# )
+# 
+# onStop(function() {
+#      poolClose(con)
+# })
 
-onStop(function() {
-     poolClose(con)
-})
+url <- "http://157.181.172.113:8080"
+
+
+d.load_custom <- function (url, endpoint, param = "", schema = "&schema_key=public"){
+     jsonlite::fromJSON(txt = paste(url, "/", endpoint, "/", param, schema, sep=""))
+}
+
+d.load <- function (url, endpoint, param = "", schema = "&schema_key=public"){
+     jsonlite::fromJSON(txt = paste(url, "/", endpoint, "/", param, schema, sep=""))[-1]
+}
+
+# x <- d.load_custom(url = url, endpoint = "filter_custom_browser_cov", param = "?limit=5&included=p.Asp80Ala,p.Asp215Gly&excluded=p.Asp77Al,p.Asp102Ala")
+# x <- d.load(url = url, endpoint = "filter_custom_browser_cov_time", param = "?limit=5&included=p.Asp80Ala,p.Asp215Gly&excluded=p.Asp77Al,p.Asp102Ala")
 
 # Configuration
 
@@ -41,30 +57,48 @@ colorstw <- c(brewer.pal(n=8, name="Set2"),brewer.pal(n=12, name="Paired")[-c(3,
 
 # Tables from database
 
-app_country_samples <- tbl(con, "app_country_samples_full") %>%
-     collect()%>%
-     as.data.frame() 
+app_country_samples <- d.load(url = url, endpoint = "country_samples", param = "?limit=100000000")
+app_lineage <- d.load(url = url, endpoint = "lineage", param = "?limit=100000000")
+app_human_meta_mv <- d.load(url = url, endpoint = "human_meta_mv", param = "?limit=100000000")
+app_human_meta_mv$date <- date(app_human_meta_mv$date)
+app_human_meta_mv_jhd <- d.load(url = url, endpoint = "human_meta_mv_jhd", param = "?limit=100000000")
+app_human_meta_mv_jhd$date <- date(app_human_meta_mv_jhd$date)
+lineage_def_data <- d.load(url = url, endpoint = "lineage_def", param = "?limit=100000000")
+app_lineage$collection_date <- date(app_lineage$collection_date)
+app_new_cases <- d.load(url = url, endpoint = "new_cases_jhd", param = "?limit=100000000")
+app_new_cases$date <- date(app_new_cases$date)
+app_variants_weekly <- d.load(url = url, endpoint = "variants_weekly", param = "?limit=100000000")
+unique_ena_run_summary <- d.load(url = url, endpoint = "unique_ena_run_summary", param = "?limit=100000000")
 
-app_lineage <- tbl(con, "app_lineage") %>%
-     collect()
 
-app_human_meta_mv <- tbl(con, "app_human_meta_mv") %>%
-     collect()
 
-app_human_meta_mv_jhd <- tbl(con, "app_human_meta_mv_jhd") %>%
-     collect()
+# 
+# app_country_samples1 <- tbl(con, "app_country_samples_full") %>%
+#      collect()%>%
+#      as.data.frame()
 
-app_new_cases <- tbl(con, "app_new_cases_jhd") %>%
-     collect()
+# app_lineage1 <- tbl(con, "app_lineage") %>%
+#      collect()
 
-app_variants_weekly <- tbl(con, "app_variants_weekly") %>%
-     collect()
+# app_human_meta_mv1 <- tbl(con, "app_human_meta_mv") %>%
+#      collect()
 
-lineage_def_data <- tbl(con, "lineage_def") %>%
-     collect()
+# app_human_meta_mv_jhd1 <- tbl(con, "app_human_meta_mv_jhd") %>%
+#      collect()
 
-unique_ena_run_summary <- tbl(con, "unique_ena_run_summary") %>%
-     collect()
+# lineage_def_data1 <- tbl(con, "lineage_def") %>%
+#      collect()
+
+# app_new_cases1 <- tbl(con, "app_new_cases_jhd") %>%
+# collect()
+
+# app_variants_weekly1 <- tbl(con, "app_variants_weekly") %>%
+#      collect()
+
+
+
+# unique_ena_run_summary1 <- tbl(con, "unique_ena_run_summary") %>%
+#      collect()
 
 variants_weekly <- app_variants_weekly %>%
      pivot_wider(names_from = variant_id, values_from = weekly_variant_sample)
@@ -112,37 +146,6 @@ makeNodes <- function(leaves){
      }
      lapply(dat$item[dat$parent == "root"], f)
 }
-
-
-collect_selected_variant <- function(con, variants, exclusion=c("")) {
-     
-     sql_query1 <-glue_sql("
-  CALL filter_custom_browser( {variants*}, {exclusion*});
-  select * from filter_country_count() ", .con = con)
-     
-     sql_query2 <-glue_sql("
-  
-  select * from filter_country_count_time() ", .con = con)
-     
-     d1 <- dbGetQuery(con, sql_query1)
-     d2 <- dbGetQuery(con, sql_query2)
-     return(list(table1=d1,table2=d2))
-}
-
-collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
-     
-     sql_query1 <-glue_sql("
-  CALL filter_custom_browser_cov( {variants*}, {exclusion*});
-  select * from filter_country_count() ", .con = con)
-     
-     sql_query2 <-glue_sql("
-  select * from filter_country_count_time() ", .con = con)
-     
-     d1 <- dbGetQuery(con, sql_query1)
-     d2 <- dbGetQuery(con, sql_query2)
-     return(list(table1=d1,table2=d2))
-}
-
 
 
 # collect_selected_variant <- function(con, variants, exclusion=c("")) {
@@ -195,7 +198,7 @@ collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
 #      d2 <- dbGetQuery(con, sql_query2)
 #      return(list(table1=d1,table2=d2))
 # }
-
+# 
 
 
 # collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
@@ -280,8 +283,8 @@ collect_selected_variant_with_cov <- function(con, variants, exclusion=c("")) {
 #      d2 <- dbGetQuery(con, sql_query2)
 #      return(list(table1=d1,table2=d2))
 # }
-
-
+# 
+# 
 
 
 convert_aa_1_to_3 <- function(aa_1){
@@ -1193,8 +1196,7 @@ server <- function(input, output) {
                hc_xAxis(categories = unique(x$date))%>%
                hc_colors(colorstw)
      })
-     
-     
+
      
      
      custom_variant_tables <- eventReactive(input$run_custom_variant, {
@@ -1207,11 +1209,25 @@ server <- function(input, output) {
           if (is_empty(excl)) excl <- ""
           #x_all <- collect_selected_variant(con, variants)
           #x <- collect_selected_variant(con, variants = incl, exclusion = excl)
+          incl <- str_c(incl, collapse = ",")
+          excl <- str_c(excl, collapse = ",")
+          
+          #if (input$only_high_cov) x <- collect_selected_variant_with_cov(con, variants = incl, exclusion = excl) else x <- collect_selected_variant(con, variants = incl, exclusion = excl)
+          
+          if (input$only_high_cov) {
+               param <- str_c("?limit=10000000&included=", incl, "&excluded=", excl, collapse = "")
+               x <- list(table1 = d.load_custom(url = url, endpoint = "filter_custom_browser_cov", param = param),
+                         table2 = d.load_custom(url = url, endpoint = "filter_custom_browser_cov_time", param = param))
+          }
+          
+          # This part below is wrong!
+          else {
+               x <-list(table1 = d.load_custom(url = url, endpoint = "filter_custom_browser_cov", param = param),
+                        table2 = d.load_custom(url = url, endpoint = "filter_custom_browser_cov_time", param = param))
+               }
           
           
-          if (input$only_high_cov) x <- collect_selected_variant_with_cov(con = con, variants=str_c(incl, collapse =  ","), exclusion=str_c(excl, collapse =  ",")) else x <- collect_selected_variant(con = con, variants=str_c(incl, collapse =  ","), exclusion=str_c(excl, collapse =  ","))
-          
-          
+         
           x
      })
      
