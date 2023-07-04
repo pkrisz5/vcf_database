@@ -19,9 +19,13 @@ library(glue)
 library(jsonlite)
 library(curl)
 library(RCurl)
+library(cookies)
 
 # The custom variant part needs to be rewritten!!!! The data is false now!
 app_version <- "v_browser_005.003"
+
+authenticated <- FALSE
+
 
 # read config
 config <- config::get()
@@ -49,9 +53,9 @@ config <- config::get()
 aa <- function (u, si) {
     # username:PRE_AUTH
     u <- base64(paste(u, ":PRE_AUTH", sep = ""))
+    cat(file=stderr(), paste(Sys.time(), "u", u, "\n"))
 
     h <- new_handle()
-
     handle_setheaders(h,
         "Authorization" = paste("Basic", u),
         "SESSION_ID" = si,
@@ -61,12 +65,12 @@ aa <- function (u, si) {
     con <- curl(config$url_aa, handle = h)
 
     # test what is back
-
     back <- tryCatch({
             (jsonlite::fromJSON(readLines(con, warn=FALSE))$SESSION_ID == si)
         }, error = function(cond){
             return (FALSE)
         })
+    close(con)
     return (back)
 }
 ##############################################
@@ -376,6 +380,10 @@ ui <- dashboardPage(
      
      dashboardBody(
           add_busy_spinner(spin = "fading-circle", position = "top-right", timeout = 1000),
+          checkboxInput("aa",
+                        label = "",
+                        value = authenticated
+          ),
           tags$head(tags$style(HTML('
       .content-wrapper {
         background-color: #ffffff;
@@ -657,7 +665,7 @@ ui <- dashboardPage(
                                   ),
                                   
                                   
-                                  actionButton("run_custom_variant", "Run custom variant search", icon("refresh"), class = "btn btn-warning" )
+                                  actionButton("run_custom_variant", "Run custom variant search", icon("arrows-rotate"), class = "btn btn-warning" )
                                   
                                   
                              ),
@@ -778,11 +786,41 @@ ui <- dashboardPage(
      )
 )
 
+uiw <- function(req) {
+###
+# read cooke
+###
+	#save(req, file="/tmp/req.Rdata")
+    user_id <- extract_cookie(req, "user_id", missing = '')
+    session_id <- extract_cookie(req, "session_id", missing = '')
+    cat(file=stderr(), paste(Sys.time(), "Cookie extract ui: [", user_id, "], [", session_id, "]\n"))
+    if (aa(user_id, session_id)) {
+        authenticated <- TRUE
+        cat(file=stderr(), paste(Sys.time(), "access granted\n"))
+    } else {
+        authenticated <- FALSE
+        cat(file=stderr(), paste(Sys.time(), "access denied\n"))
+    }
+
+###
+# dashboard
+###
+    ui
+
+}
+
+
+
 ############################################################################################ 
 # Server part of the the app
 ############################################################################################
 
-server <- function(input, output) {
+server <- function(input, output, session) {
+    
+
+    observe({
+        cat(file=stderr(), paste(Sys.time(), "auth", input$authenticated, "\n"))
+    })
      
      output$keepAlive <- renderText({
           req(input$count)
@@ -1502,4 +1540,4 @@ server <- function(input, output) {
 }
 
 # Run the application
-shinyApp(ui = ui, server = server)
+shinyApp(ui = uiw, server = server)
